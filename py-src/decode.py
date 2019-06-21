@@ -34,9 +34,13 @@ sharp = string("#")
 
 
 def task_from_list(lst):
+    if len(lst[2]) == 1 and not lst[2][0]:
+        os = []
+    else:
+        os = lst[2]
     return {"map": lst[0],
             "start": lst[1],
-            "obstacles": lst[2],
+            "obstacles": os,
             "boosters": lst[3]}
 
 
