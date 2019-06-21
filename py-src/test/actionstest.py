@@ -71,3 +71,15 @@ class ActionTest(unittest.TestCase):
         self.assertEqual(0, state.wheel_duration)
         state.nextAction(MoveRight())
         self.assertEqual((6, 5), state.botPos())
+
+    def testWheelsCorner(self):
+        state = State(self.contour, (1, 1), [], [])
+        state.wheel_duration = 4
+
+        state.nextAction(MoveLeft())
+        self.assertEqual((0, 1), state.botPos())
+        state.nextAction(MoveDown())
+        self.assertEqual((0, 0), state.botPos())
+        state.nextAction(MoveDown())
+        self.assertEqual((0, 0), state.botPos())
+        self.assertEqual(2, state.wheel_duration)
