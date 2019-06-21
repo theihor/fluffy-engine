@@ -1,3 +1,4 @@
 from decode import parse_task
 
-print(parse_task("/home/theihor/Downloads/part-1-examples/example-01.desc"))
+if __name__ == '__main__':
+    print(parse_task("../example-01/example-01.desc"))
