@@ -8,12 +8,15 @@ class Bot:
         ]
 
     def is_attachable(self, x: int, y: int):
-        coords = self.manipulators + [self.pos]
+        coords = self.manipulators + [(0, 0)]
 
-        def func(pos: tuple):
-            abs(pos[0] - x) + abs(pos[1] - y)
+        if any(pos[0] == x and pos[1] == y for pos in coords):
+            return False
 
-        return any(func(pos) for pos in coords)
+        def true(pos: tuple):
+            return abs(pos[0] - x) + abs(pos[1] - y) == 1
+
+        return any(true(pos) for pos in coords)
 
     def attach(self, x: int, y: int):
         pass

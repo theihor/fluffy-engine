@@ -83,3 +83,15 @@ class ActionTest(unittest.TestCase):
         state.nextAction(MoveDown())
         self.assertEqual((0, 0), state.botPos())
         self.assertEqual(2, state.wheel_duration)
+
+    # https://icfpcontest2019.github.io/download/specification-v1.pdf
+    # 2.2.1  Extension of the Manipulator
+    def testValidateAttach(self):
+        state = State(self.contour, (1, 1), [], [])
+        state.boosters[Booster.MANIPULATOR] = 1
+
+        self.assertTrue(AttachManipulator((1, 2)).validate(state))
+        self.assertTrue(AttachManipulator((-1, 0)).validate(state))
+        self.assertTrue(AttachManipulator((2, 1)).validate(state))
+        self.assertFalse(AttachManipulator((3, 1)).validate(state))
+        self.assertFalse(AttachManipulator((0, 0)).validate(state))
