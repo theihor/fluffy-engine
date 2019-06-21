@@ -34,6 +34,7 @@ class MoveUp(SimpleAction):
         super().process(state)
         (x, y) = state.botPos()
         state.setBotPos(x, y + 1)
+        state.repaint()
         if state.wheel_duration > 0 and self.validate(state):
             state.setBotPos(x, y + 2)
 
@@ -54,6 +55,7 @@ class MoveDown(SimpleAction):
         super().process(state)
         (x, y) = state.botPos()
         state.setBotPos(x, y - 1)
+        state.repaint()
         if state.wheel_duration > 0 and self.validate(state):
             state.setBotPos(x, y - 2)
 
@@ -74,6 +76,7 @@ class MoveLeft(SimpleAction):
         super().process(state)
         (x, y) = state.botPos()
         state.setBotPos(x - 1, y)
+        state.repaint()
         if state.wheel_duration > 0 and self.validate(state):
             state.setBotPos(x - 2, y)
 
@@ -94,6 +97,7 @@ class MoveRight(SimpleAction):
         super().process(state)
         (x, y) = state.botPos()
         state.setBotPos(x + 1, y)
+        state.repaint()
         if state.wheel_duration > 0 and self.validate(state):
             state.setBotPos(x + 2, y)
 

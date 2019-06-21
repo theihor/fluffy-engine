@@ -1,3 +1,6 @@
+from constants import STRICT_VALIDATION
+
+
 class Bot:
     def __init__(self, pos: tuple):
         self.pos = pos
@@ -19,10 +22,19 @@ class Bot:
         return any(true(pos) for pos in coords)
 
     def attach(self, x: int, y: int):
-        pass
+        if STRICT_VALIDATION and not self.is_attachable(x, y):
+            raise RuntimeError("Can't attach manipulator")
+        self.manipulators.append((x, y))
 
     def turnLeft(self):
         pass
 
     def turnRight(self):
         pass
+
+    def process(self, state):
+        def real(pos):
+            return pos[0] + self.pos[0], pos[1] + self.pos[1]
+        coords = [real(pos) for pos in self.manipulators] + [self.pos]
+        for pos in coords:
+            state.paintCell(pos[0], pos[1])

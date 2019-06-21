@@ -88,13 +88,23 @@ class State(object):
     def cell(self, x, y):
         return self.cells[y][x]
 
+    def paintCell(self, x, y):
+        cell = self.cell(x, y)
+        if cell[1] != Cell.OBSTACLE:
+            # TODO(visibility handling)
+            self.cells[y][x] = (cell[0], Cell.CLEAN)
+
     def nextAction(self, action):
         if action.validate(self):
             self.actions += [action]
             action.process(self)
             self.tickTime()
 
+    def repaint(self):
+        self.bot.process(self)
+
     def tickTime(self):
+        self.repaint()
         if self.wheel_duration > 0:
             self.wheel_duration -= 1
         if self.drill_duration > 0:
@@ -107,5 +117,7 @@ class State(object):
                 ch = '.'
                 if cell is Cell.OBSTACLE:
                     ch = '#'
+                elif cell is Cell.CLEAN:
+                    ch = 'o'
                 print(ch, end='')
             print()
