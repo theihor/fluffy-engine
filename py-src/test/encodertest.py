@@ -7,12 +7,12 @@ from actions import *
 
 class EncoderTest(unittest.TestCase):
     actions = [
-        SimpleAction("W"),
-        AttachManipulatorAction(3, 4),
-        SimpleAction("W"),
-        SimpleAction("Z"),
-        AttachManipulatorAction(1, 2),
-        SimpleAction("Q")
+        MoveUp(),
+        AttachManipulator((3, 4)),
+        MoveUp(),
+        DoNothing(),
+        AttachManipulator((1, 2)),
+        TurnLeft()
     ]
     filename = "prob-001.sol"
     task_no = 1
