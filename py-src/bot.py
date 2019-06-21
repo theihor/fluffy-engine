@@ -27,10 +27,14 @@ class Bot:
         self.manipulators.append((x, y))
 
     def turnLeft(self):
-        pass
+        def new(pos):
+            return -pos[1], pos[0]
+        self.manipulators = [new(pos) for pos in self.manipulators]
 
     def turnRight(self):
-        pass
+        def new(pos):
+            return pos[1], -pos[0]
+        self.manipulators = [new(pos) for pos in self.manipulators]
 
     def process(self, state):
         def real(pos):
