@@ -58,5 +58,4 @@ class PaintTest(unittest.TestCase):
         self.assertEqual(Cell.ROT, getCellType(state, 1, 3))
 
         state.nextAction(AttachManipulator((1, 2)))
-        state.show()
         self.assertEqual(Cell.CLEAN, getCellType(state, 2, 3))
