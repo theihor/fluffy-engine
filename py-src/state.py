@@ -73,10 +73,11 @@ class State(object):
         return self.cells[y][x]
 
     def paintCell(self, x, y):
-        cell = self.cell(x, y)
-        if cell[1] != Cell.OBSTACLE:
-            # TODO(visibility handling)
-            self.cells[y][x] = (cell[0], Cell.CLEAN)
+        if (x >= 0 and x < self.width and y >= 0 and y < self.height):
+            cell = self.cell(x, y)
+            if cell[1] != Cell.OBSTACLE:
+                # TODO(visibility handling)
+                self.cells[y][x] = (cell[0], Cell.CLEAN)
 
     def nextAction(self, action):
         if action.validate(self):
