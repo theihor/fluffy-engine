@@ -17,7 +17,7 @@ def line_intersection(line1, line2):
 
     div = det(xdiff, ydiff)
     if div == 0:
-       return False
+        return False
 
     d = (det(*line1), det(*line2))
     x = det(d, xdiff) / div
@@ -26,6 +26,7 @@ def line_intersection(line1, line2):
 
 
 def cross_point(point, line):
+    """Check whether the cell on point is crossed by line"""
     ((x1, y1), (x2, y2)) = line
     (ix, iy) = point
 
@@ -36,8 +37,13 @@ def cross_point(point, line):
             line2 = ((ix, iy), (ix + dx, iy + dy))
             p = line_intersection(line, line2)
             if p: cross_points.append(p)
-    return cross_points
 
+    if cross_points and cross_points[0] != cross_points[1]:
+        #print(str(point) + " crossed! " + str(cross_points))
+        return True
+    else:
+        #print(str(point) + " not crossed!")
+        return False
 
 
 class State(object):
@@ -110,24 +116,55 @@ class State(object):
         return self.cells[y][x]
 
     def visible(self, p):
-        (x1, y1) = self.botPos
+        def is_obstacle(x, y):
+            (_, c) = self.cell(x, y)
+            return c == Cell.OBSTACLE
+        (x1, y1) = self.botPos()
         (x2, y2) = p
-        if x1 < x2:
-            start_x = x1
-            end_x = x2
-        else:
-            start_x = x2
-            end_x = x1
-        def y(x):
-            return y1 + (x - x1) * (y2 - y1) / (x2 - x1)
-        x = start_x + 1
-        while x < end_x:
-            ix = ceil(x)
-            y = y(ix)
-            iy = floor(y)
-            if self.cell(ix, iy)[1] == Cell.OBSTACLE:
-                return False
+        dx = x2 - x1
+        dy = y2 - y1
+        if (abs(dx) == 1 or dx == 0) and (abs(dy) == 1 or dy == 0):
+            # adjacent cell, just check it
+            return not is_obstacle(*p)
 
+        # straight line case
+        if dx == 0:
+            for y in range(y1 + 1, y2 + 1):
+                if is_obstacle(x1, y): return False
+            return True
+        if dy == 0:
+            for x in range(x1 + 1, x2 + 1):
+                if is_obstacle(x, y1): return False
+            return True
+
+        # otherwise play lines
+        # make dx/dy to be a step in direction to p
+        if dx > 0: dx = 1
+        else: dx = -1
+        if dy > 0: dy = 1
+        else: dy = -1
+
+        line = ((x1 + 0.5, y1 + 0.5),
+                (x2 + 0.5, y2 + 0.5))
+
+        x = x1
+        y = y1
+
+        while x != x2 and y != y2:
+         #   print("cheking " + str(x) + " " + str(y))
+            p1 = (x + dx, y)
+            if cross_point(p1, line):
+                if is_obstacle(*p1):
+                    return False
+                x = x + dx
+            else:
+                p2 = (x, y + dy)
+                if cross_point(p2, line):
+                    if is_obstacle(*p2):
+                        return False
+                    y = y + dy
+                else: raise Exception("This should never happen")
+        return True
 
 
     def paintCell(self, x, y):
