@@ -12,7 +12,7 @@ class ActionTest(unittest.TestCase):
     ]
 
     def testValidateMovesCorner1(self):
-        state = State(self.contour, (0, 0), None, None)
+        state = State(self.contour, (0, 0), [], [])
 
         self.assertFalse(MoveDown().validate(state))
         self.assertFalse(MoveLeft().validate(state))
@@ -20,7 +20,7 @@ class ActionTest(unittest.TestCase):
         self.assertTrue(MoveRight().validate(state))
 
     def testValidateMovesCorner2(self):
-        state = State(self.contour, (9, 9), None, None)
+        state = State(self.contour, (9, 9), [], [])
 
         self.assertTrue(MoveDown().validate(state))
         self.assertTrue(MoveLeft().validate(state))
@@ -28,7 +28,7 @@ class ActionTest(unittest.TestCase):
         self.assertFalse(MoveRight().validate(state))
 
     def testValidateMovesCenter(self):
-        state = State(self.contour, (5, 5), None, None)
+        state = State(self.contour, (5, 5), [], [])
 
         self.assertTrue(MoveDown().validate(state))
         self.assertTrue(MoveLeft().validate(state))
@@ -36,7 +36,7 @@ class ActionTest(unittest.TestCase):
         self.assertTrue(MoveRight().validate(state))
 
     def testValidateWheels(self):
-        state = State(self.contour, (5, 5), None, None)
+        state = State(self.contour, (5, 5), [], [])
         state.wheel_duration = 1
 
         self.assertTrue(MoveDown().validate(state))
@@ -45,7 +45,7 @@ class ActionTest(unittest.TestCase):
         self.assertTrue(MoveRight().validate(state))
 
     def testMovesCorner1(self):
-        state = State(self.contour, (0, 0), None, None)
+        state = State(self.contour, (0, 0), [], [])
         state.nextAction(MoveUp())
         self.assertEqual((0, 1), state.botPos())
         state.nextAction(MoveRight())
@@ -56,7 +56,7 @@ class ActionTest(unittest.TestCase):
         self.assertEqual((0, 0), state.botPos())
 
     def testWheelsCenter(self):
-        state = State(self.contour, (5, 5), None, None)
+        state = State(self.contour, (5, 5), [], [])
         state.wheel_duration = 4
 
         state.nextAction(MoveUp())

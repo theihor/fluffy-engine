@@ -1,5 +1,7 @@
 from enum import Enum, auto
 from bot import Bot
+from collections import namedtuple
+import heapq
 
 
 class Cell(Enum):
@@ -12,6 +14,9 @@ class Booster(Enum):
     WHEEL = auto()
     DRILL = auto()
     MANIPULATOR = auto()
+
+
+VEdge = namedtuple("VEdge", ('x', 'y1', 'y2'))
 
 
 class State(object):
@@ -27,30 +32,52 @@ class State(object):
             Booster.MANIPULATOR: 0
         }
         self.createCells(contour)
+        for obstacle in obstacles:
+            if len(obstacle) > 0:
+                self.fillContour(obstacle, (None, Cell.OBSTACLE))
+
+    def decode(d):
+        return State(d['map'], d['start'], d['obstacles'], d['boosters'])
 
     def createCells(self, contour):
         self.width = max(contour, key=lambda pos: pos[0])[0]
         self.height = max(contour, key=lambda pos: pos[1])[1]
-        self.cells = [[(None, Cell.ROT)] * self.width] * self.height
+        self.cells = []
+        for y in range(self.height):
+            row = []
+            for x in range(self.width):
+                row.append((None, Cell.OBSTACLE))
+            self.cells.append(row)
+        self.fillContour(contour, (None, Cell.ROT))
 
-        # temporary disabled for test purposes
-
-        # self.addObstacles(contour)
-        # for y in range(self.height):
-        #     lastX = self.fillRow(y, 0, 1)
-        #     if lastX < self.width:
-        #         self.fillRow(y, self.width - 1, -1)
-
-    def addObstacles(self, obstacles):
-        for (x, y) in obstacles:
-            self.cells[y][x] = (None, Cell.OBSTACLE)
-
-    def fillRow(self, y, x, dx):
-        row = self.cells[y]
-        while row[x][1] != Cell.OBSTACLE and x < self.width:
-            row[x] = (None, Cell.OBSTACLE)
-            x += dx
-        return x
+    def fillContour(self, contour, value):
+        queue = []
+        for (x1, y1), (x2, y2) in zip(contour, contour[1:] + [contour[0]]):
+            if x1 == x2:
+                edge = VEdge(x1, min(y1, y2), max(y1, y2))
+                queue.append((edge.y1, edge))
+                queue.append((edge.y2, ()))
+        heapq.heapify(queue)
+        curedges = []
+        curY = queue[0][0]
+        while len(curedges) != 0 or len(queue) != 0:
+            # print('edges ', curedges)
+            # print('queue ', queue)
+            # print('curY ', curY)
+            # Remove finished edges
+            curedges = list(filter(lambda e: e.y2 != curY, curedges))
+            # Add new edges
+            while len(queue) != 0 and queue[0][0] == curY:
+                (qY, edge) = heapq.heappop(queue)
+                if edge != ():
+                    curedges.append(edge)
+            # Sort cur edges
+            curedges = list(sorted(curedges, key=lambda e: e.x))
+            for ind in range(0, len(curedges), 2):
+                for x in range(curedges[ind].x, curedges[ind + 1].x):
+                    # print(x, curY)
+                    self.cells[curY][x] = value
+            curY += 1
 
     def setBotPos(self, x, y):
         self.bot.pos = (x, y)
@@ -72,3 +99,13 @@ class State(object):
             self.wheel_duration -= 1
         if self.drill_duration > 0:
             self.drill_duration -= 1
+
+    def show(self):
+        for y in reversed(range(self.height)):
+            for x in range(self.width):
+                (booster, cell) = self.cells[y][x]
+                ch = '.'
+                if cell is Cell.OBSTACLE:
+                    ch = '#'
+                print(ch, end='')
+            print()
