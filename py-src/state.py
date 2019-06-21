@@ -30,12 +30,8 @@ class State(object):
     def createCells(self, contour):
         self.width = max(contour, key=lambda pos: pos[0])[0]
         self.height = max(contour, key=lambda pos: pos[1])[1]
-        self.cells = []
-        for y in range(self.height):
-            row = []
-            for x in range(self.width):
-                row.append((None, Cell.OBSTACLE))
-            self.cells.append(row)
+        self.cells = [row[:] for row in [[(None, Cell.OBSTACLE)] * self.width]
+                      * self.height]
         self.fillContour(contour, (None, Cell.ROT))
 
     def fillContour(self, contour, value):
