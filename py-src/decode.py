@@ -1,4 +1,4 @@
-from enum import Enum, auto
+from constants import Booster
 
 from parsec import *
 
@@ -10,18 +10,11 @@ point = string("(").compose(
 a_map = sepBy(point, string(","))
 
 
-class Booster(Enum):
-    B = auto()
-    F = auto()
-    L = auto()
-    X = auto()
-
-
 booster_code_dict = {
-    "B": Booster.B,
-    "F": Booster.F,
-    "L": Booster.L,
-    "X": Booster.X
+    "B": Booster.MANIPULATOR,
+    "F": Booster.WHEEL,
+    "L": Booster.DRILL,
+    "X": Booster.MYSTERIOUS
 }
 
 booster_code = one_of("BFLX").parsecmap(lambda c: booster_code_dict[c])

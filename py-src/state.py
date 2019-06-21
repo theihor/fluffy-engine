@@ -1,19 +1,7 @@
-from enum import Enum, auto
+from constants import Booster, Cell
 from bot import Bot
 from collections import namedtuple
 import heapq
-
-
-class Cell(Enum):
-    ROT = auto()
-    CLEAN = auto()
-    OBSTACLE = auto()
-
-
-class Booster(Enum):
-    WHEEL = auto()
-    DRILL = auto()
-    MANIPULATOR = auto()
 
 
 VEdge = namedtuple("VEdge", ('x', 'y1', 'y2'))
