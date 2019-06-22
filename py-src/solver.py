@@ -5,7 +5,6 @@ from encoder import Encoder
 from actions import MoveUp, MoveDown, MoveLeft, MoveRight, AttachManipulator
 import pathfinder
 import astar
-import copy
 
 
 def solve(taskFile, solutionFile, solver):
@@ -154,9 +153,12 @@ def applyPath(st, path):
         st.nextAction(command)
 
 
-def addManipsToSet(s, state, bot, pos):
-    bot.repaintWith(pos, state,
-                    lambda x, y: s.add((x, y)))
+def addManipsToSet(s, blob, state, bot, pos):
+
+    def add(x, y):
+        if (x, y) in blob:
+            s.add((x, y))
+    bot.repaintWith(pos, state, add)
 
 
 def cleanSetForBlob(state, blob):
@@ -175,9 +177,8 @@ class AStarNode(object):
         self.pos = pos
         self.cleanSet = cleanSet
         self.path = path
-        self.savedNeghbours = None
 
-    def getNeighbors(self):
+    def neighbors(self):
         def end(x, y):
             return (self.state.cell(x, y)[1] == Cell.ROT
                     and (x, y) not in self.cleanSet)
@@ -195,47 +196,34 @@ class AStarNode(object):
                 # print('path', path)
                 # print('cleanSet', cleanSet)
                 assert(pos != self.pos)
-                addManipsToSet(self.cleanSet, self.state, self.bot, pos)
+                addManipsToSet(cleanSet, self.blob, self.state, self.bot, pos)
             endPos = path[len(path)-1]
+            assert(endPos not in self.cleanSet)
             node = AStarNode(self.bot, self.blob, self.state, endPos, cleanSet, self.path + path)
             nodes.append(node)
         return nodes
 
-    def neighbors(self):
-        if self.savedNeghbours is None:
-            self.savedNeghbours = self.getNeighbors()
-        print('pos', self.pos, 'clean', self.cleanSet, 'neighbors', len(self.savedNeghbours))
-        return self.savedNeghbours
-
-    def score(self, leftBlobSize):
+    def score(self):
         numManip = len(self.bot.manipulators)
-        res = (leftBlobSize - len(self.cleanSet)) / numManip + len(self.path)
-        # print('path', self.path, 'score', res)
+        res = (len(self.blob) - len(self.cleanSet)) / (numManip + 1) + len(self.path)
+        # print('path', self.path, 'rot', len(self.blob) - len(self.cleanSet))
         return res
 
     def final(self):
-        return len(self.neighbors()) == 0
+        return len(self.cleanSet) == len(self.blob)
 
 
 class AStarSolver(astar.AStar):
-    def __init__(self, state, blob):
-        self.blob = blob
-        leftBlobSize = 0
-        for (x, y) in blob:
-            if state.cell(x, y)[1] is Cell.ROT:
-                leftBlobSize += 1
-        self.leftBlobSize = leftBlobSize
-
     def neighbors(self, node):
         return node.neighbors()
 
     def distance_between(self, n1, n2):
-        score1 = n1.score(self.leftBlobSize)
-        score2 = n2.score(self.leftBlobSize)
+        score1 = n1.score()
+        score2 = n2.score()
         return abs(score1 - score2)
 
     def heuristic_cost_estimate(self, node, goal):
-        return node.score(self.leftBlobSize)
+        return node.score()
 
     def is_goal_reached(self, node, goal):
         return node.final()
@@ -251,11 +239,13 @@ def solveWithBlobs(st, blobs):
                 return blob
         return None
     curPos = st.botPos()
+    blobInd = 0
     while True:
         blob = findBlob(curPos)
         if blob is None:
             break
-        print('blob', blob)
+        blobInd += 1
+        print('blob', blobInd, 'of', len(blobs))
         # blobRanks = {}
 
         # def add(l, x, y):
@@ -263,7 +253,7 @@ def solveWithBlobs(st, blobs):
         # pathfinder.bfsFind(st, curPos,
         #                    lambda l, x, y: False,
         #                    register=add)
-        astar = AStarSolver(st, blob)
+        astar = AStarSolver()
         bot = st.bots[0]
         cs = cleanSetForBlob(st, blob)
         startNode = AStarNode(bot, blob, st, bot.pos, cs, [bot.pos])
@@ -272,7 +262,7 @@ def solveWithBlobs(st, blobs):
             break
         node = res[len(res)-1]
         applyPath(st, node.path)
-        print('path', node.path)
+        # print('path', node.path)
         # while True:
         #     nextPos = closestRotInBlob(st, blob, {})
         #     if nextPos is None:
