@@ -195,12 +195,17 @@ class State(object):
                     y = y + dy
         return True
 
-
     def paintCell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
             if cell[1] != Cell.OBSTACLE and self.visible((x, y)):
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
+
+    def tryPaintCellWith(self, x, y, func):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            cell = self.cell(x, y)
+            if (cell[1] == Cell.ROT and self.visible((x, y))):
+                func(x, y)
 
     def nextActions(self, actions):
         for (bot, action) in zip(self.bots, actions):

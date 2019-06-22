@@ -16,5 +16,5 @@ class BFSTest(unittest.TestCase):
 
     def test1(self):
         state = State(self.contour, (0, 0), [self.obst1], [])
-        path = bfsFind(state, (1, 1), lambda x, y: x == 2 and y == 4)
+        path = bfsFind(state, (1, 1), lambda l, x, y: x == 2 and y == 4)
         self.assertEqual([(1, 1), (1, 2), (1, 3), (1, 4), (2, 4)], path)
