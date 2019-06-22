@@ -214,6 +214,9 @@ class State(object):
     def nextAction(self, action):
         self.nextActions([action])
 
+    def actions(self):
+        return map(lambda x: x.actions, self.bots)
+
     def repaint(self):
         for bot in self.bots:
             bot.repaint(self)

@@ -37,10 +37,10 @@ def pathToCommands(path):
 LR = 1
 
 
-def collectBoosters(st):
+def collectBoosters(st, bot):
     global LR
     while True:
-        path = pathfinder.bfsFind(st, st.botPos(),
+        path = pathfinder.bfsFind(st, bot.pos,
                                   lambda x, y: st.cell(x, y)[0] == Booster.MANIPULATOR)
         if path is None:
             break
@@ -49,29 +49,30 @@ def collectBoosters(st):
             st.nextAction(command)
 
         turns = 0
-        while st.bot.manipulators[0] != (1, 0):
+        while bot.manipulators[0] != (1, 0):
             turns += 1
-            st.bot.turnLeft()
+            bot.turnLeft()
         idx = 2
-        while not st.bot.is_attachable(1, idx * LR):
+        while not bot.is_attachable(1, idx * LR):
             idx += 1
         pos = (idx * LR, 1)
         LR *= -1
         while turns > 0:
             turns -= 1
-            st.bot.turnRight()
+            bot.turnRight()
             pos = (pos[1], -pos[0])
         st.nextAction(AttachManipulator(pos))
 
 
 def closestRotSolver(st):
-    collectBoosters(st)
+    bot = st.bots[0]
+    collectBoosters(st, bot)
     while True:
-        path = pathfinder.bfsFind(st, st.botPos(),
+        path = pathfinder.bfsFind(st, bot.pos,
                                   lambda x, y: st.cell(x, y)[1] == Cell.ROT)
         if path is None:
             break
         commands = pathToCommands(path)
         for command in commands:
-            st.nextAction(command)
-    return st.actions
+            st.nextActions([command])
+    return st.actions()
