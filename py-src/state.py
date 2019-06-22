@@ -251,16 +251,19 @@ class State(object):
         self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
 
     def show(self):
-        for y in reversed(range(self.height)):
-            for x in range(self.width):
-                (booster, cell) = self.cells[y][x]
-                ch = '.'
-                if cell is Cell.OBSTACLE:
-                    ch = '#'
-                elif cell is Cell.CLEAN:
-                    ch = 'o'
-                print(ch, end='')
-            print()
+        print_cells(self.cells, self.width, self.height)
+
+def print_cells(cells, w, h):
+    for y in reversed(range(h)):
+        for x in range(w):
+            (booster, cell) = cells[y][x]
+            ch = '.'
+            if cell is Cell.OBSTACLE:
+                ch = '#'
+            elif cell is Cell.CLEAN:
+                ch = 'o'
+            print(ch, end='')
+        print()
 
     def is_all_clean(self):
         return self.total_rot_cells <= 0

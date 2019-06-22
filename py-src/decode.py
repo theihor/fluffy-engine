@@ -46,3 +46,13 @@ task = a_map.bind(lambda parsed_map: sharp.compose(point.parsecmap(lambda p: [pa
 def parse_task(filename):
     with open(filename, "r") as f:
         return task.parse(''.join(f.readlines()))
+
+
+puzzle = sepBy(nat, string(","))\
+    .bind(lambda lst: sharp.compose(a_map.parsecmap(lambda isqs: [lst, isqs])))\
+    .bind(lambda lst: sharp.compose(a_map.parsecmap(lambda osqs: tuple(lst + [osqs]))))
+
+
+def parse_puzzle(filename):
+    with open(filename, "r") as f:
+        return puzzle.parse(''.join(f.readlines()))
