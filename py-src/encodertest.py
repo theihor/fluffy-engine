@@ -6,14 +6,14 @@ from actions import *
 
 
 class EncoderTest(unittest.TestCase):
-    actions = [
+    actions = [[
         MoveUp(),
         AttachManipulator((3, 4)),
         MoveUp(),
         DoNothing(),
         AttachManipulator((1, 2)),
         TurnLeft()
-    ]
+    ]]
     filename = "prob-001.sol"
     task_no = 1
 

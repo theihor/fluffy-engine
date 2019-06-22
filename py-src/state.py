@@ -65,10 +65,7 @@ def cross_point(point, line):
 
 class State(object):
     def __init__(self, contour, botPos: tuple, obstacles, boosters):
-        self.actions = []
-        self.bot = Bot(botPos)
-        self.wheel_duration = 0
-        self.drill_duration = 0
+        self.bots = [Bot(botPos)]
         self.last_painted = 0
         self.total_rot_cells = 0
         # map [booster -> amount]
@@ -131,22 +128,27 @@ class State(object):
                         self.total_rot_cells += 1
             curY += 1
 
+    # testing only
     def setBotPos(self, x, y):
-        self.bot.pos = (x, y)
+        self.bots[0].pos = (x, y)
 
+    # testing only
     def botPos(self):
-        return self.bot.pos
+        return self.bots[0].pos
 
     def cell(self, x, y):
         return self.cells[y][x]
 
     def visible(self, p):
+        (x1, y1) = self.botPos()
+        return self.visibleFrom(x1, y1, p)
+
+    def visibleFrom(self, x1, y1, p):
 
         #print("visible " + str(p) + " from " + str(self.botPos()))
         def is_obstacle(x, y):
             (_, c) = self.cell(x, y)
             return c == Cell.OBSTACLE
-        (x1, y1) = self.botPos()
         (x2, y2) = p
         dx = x2 - x1
         dy = y2 - y1
@@ -177,7 +179,7 @@ class State(object):
         x = x1
         y = y1
 
-        while x != x2 and y != y2:
+        while x != x2 or y != y2:
             #print("cheking " + str(x) + " " + str(y))
             p1 = (x + dx, y)
             if cross_point(p1, line):
@@ -200,7 +202,6 @@ class State(object):
                     y = y + dy
         return True
 
-
     def paintCells(self, coords):
         for pos in coords:
             self.paintCell(*pos)
@@ -209,29 +210,41 @@ class State(object):
     def paintCell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
-            if cell[1] != Cell.OBSTACLE and self.visible((x, y)):
+            if cell[1] == Cell.ROT and self.visible((x, y)):
                 (_, prev_state) = self.cells[y][x]
                 if prev_state == Cell.ROT:
                     self.last_painted += 1
                     self.total_rot_cells -= 1
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
 
+    def tryPaintCellWith(self, bx, by, x, y, func):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            cell = self.cell(x, y)
+            if (cell[1] == Cell.ROT and self.visibleFrom(bx, by, (x, y))):
+                self.last_painted = 0
+                func(x, y)
+
+    def nextActions(self, actions):
+        for (bot, action) in zip(self.bots, actions):
+            if action.validate(self, bot):
+                bot.actions.append(action)
+                action.process(self, bot)
+                bot.process(self)
+                bot.tickTime()
+            else:
+                raise RuntimeError("Invalid command {} at {} step"
+                                   .format(action, len(bot.actions)))
+        self.repaint()
+
     def nextAction(self, action):
-        if action.validate(self):
-            self.actions += [action]
-            self.last_painted = 0
-            action.process(self)
-            self.tickTime()
-            self.repaint()
+        self.nextActions([action])
+
+    def actions(self):
+        return map(lambda x: x.actions, self.bots)
 
     def repaint(self):
-        self.bot.process(self)
-
-    def tickTime(self):
-        if self.wheel_duration > 0:
-            self.wheel_duration -= 1
-        if self.drill_duration > 0:
-            self.drill_duration -= 1
+        for bot in self.bots:
+            bot.repaint(self)
 
     def removeBooster(self, pos: tuple):
         self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
