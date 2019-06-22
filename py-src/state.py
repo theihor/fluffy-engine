@@ -79,6 +79,13 @@ class State(object):
         for obstacle in obstacles:
             if len(obstacle) > 0:
                 self.fillContour(obstacle, (None, Cell.OBSTACLE))
+        self.addBoosters(boosters)
+        self.repaint()
+
+    def addBoosters(self, boosters):
+        for booster in boosters:
+            (x, y) = booster[1]
+            self.cells[y][x] = (booster[0], Cell.ROT)
 
     def decode(d):
         return State(d['map'], d['start'], d['obstacles'], d['boosters'])
@@ -190,10 +197,9 @@ class State(object):
 
 
     def paintCell(self, x, y):
-        if (x >= 0 and x < self.width and y >= 0 and y < self.height):
+        if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
-            if cell[1] != Cell.OBSTACLE:
-                # TODO(visibility handling)
+            if cell[1] != Cell.OBSTACLE and self.visible((x, y)):
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
 
     def nextAction(self, action):
@@ -201,16 +207,19 @@ class State(object):
             self.actions += [action]
             action.process(self)
             self.tickTime()
+            self.repaint()
 
     def repaint(self):
         self.bot.process(self)
 
     def tickTime(self):
-        self.repaint()
         if self.wheel_duration > 0:
             self.wheel_duration -= 1
         if self.drill_duration > 0:
             self.drill_duration -= 1
+
+    def removeBooster(self, pos: tuple):
+        self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
 
     def show(self):
         for y in reversed(range(self.height)):

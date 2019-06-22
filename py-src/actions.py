@@ -144,7 +144,8 @@ class AttachWheels(SimpleAction):
 
     def process(self, state: State):
         super().process(state)
-        state.wheel_duration = WHEELS_DURATION
+        state.wheel_duration = WHEELS_DURATION + 1
+        state.boosters[Booster.WHEEL] -= 1
 
 
 class AttachDrill(SimpleAction):
@@ -156,7 +157,8 @@ class AttachDrill(SimpleAction):
 
     def process(self, state: State):
         super().process(state)
-        state.drill_duration = DRILL_DURATION
+        state.drill_duration = DRILL_DURATION + 1
+        state.boosters[Booster.DRILL] -= 1
 
 
 class AttachManipulator(SimpleAction):
