@@ -73,7 +73,8 @@ class State(object):
         self.boosters = {
             Booster.DRILL: 0,
             Booster.WHEEL: 0,
-            Booster.MANIPULATOR: 0
+            Booster.MANIPULATOR: 0,
+            Booster.MYSTERIOUS: 0
         }
         self.createCells(contour)
         for obstacle in obstacles:
