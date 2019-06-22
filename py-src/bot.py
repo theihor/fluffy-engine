@@ -1,9 +1,10 @@
-from constants import STRICT_VALIDATION, Booster
+from constants import STRICT_VALIDATION, Booster, Direction
 
 
 class Bot:
     def __init__(self, pos: tuple):
         self.pos = pos
+        self.direction =
         self.manipulators = [
             (1, 0),
             (1, 1),

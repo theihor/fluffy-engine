@@ -13,11 +13,30 @@ all_actions = [MoveDown(), MoveUp(), MoveLeft(), MoveRight(), TurnLeft(), TurnRi
 
 epsilon = 0.005
 
+
+def state_key(state):
+    (bx, by) = state.bots[0].pos
+    arr = []
+    ms = [(bx + x, by + y) for (x, y) in state.bots[0].manipulators]
+    for x in range(bx - 2, bx + 3):
+        for y in range(by - 1, by + 3):
+            if (x, y) in ms:
+                continue
+            if 0 <= x < state.width and 0 <= y < state.height:
+                (_, c) = state.cell(x, y)
+                if c == Cell.ROT:
+                    arr.append('r')
+                else:
+                    arr.append('c') # clean
+            else:
+                arr.append('o')
+    return ''.join(arr)
+
+
 def q_action(state):
-    bpos = state.botPos()
-    valid_actions = [a for a in all_actions if a.validate(state)]
+    valid_actions = [a for a in all_actions if a.validate(state, state.bots[0])]
     def value(a):
-        key = (bpos, str(a))
+        key = state_key(state) + str(a)
         if not key in qmap:
             qmap[key] = random.random() * 1e-5
         return qmap[key]
@@ -34,13 +53,14 @@ def q_action(state):
                 best = a
         return (best, bestv)
 
-alpha = 0.1 # learning rate
-gamma = 0.9  # discount factor
+
+alpha = 0.05 # learning rate
+gamma = 0.95  # discount factor
 
 
 def learning_run1(state, random_start=False):
     action_list = []
-    max_steps = state.height * state.width * 2
+    max_steps = state.height * state.width
 
     if random_start:
         start_pos = None
@@ -53,7 +73,7 @@ def learning_run1(state, random_start=False):
     state.setBotPos(*start_pos)
     while not state.is_all_clean() and steps < max_steps:
         (a, v) = q_action(state)
-        bpos1 = state.botPos()
+        key = state_key(state) + str(a)
         action_list.append(a)
         state.nextAction(a)
         steps += 1
@@ -62,7 +82,7 @@ def learning_run1(state, random_start=False):
         else: r = -1
 
         # update Q
-        key = (bpos1, str(a))
+
         (_, v1) = q_action(state)
         #print("r = " + str(r) + ", q = " + str(qmap[key]), end=" ")
         qmap[key] += alpha * (r + gamma * v1 - v)
@@ -95,7 +115,7 @@ def get_state(task_id):
 def learn(task_id):
     global qmap
 
-    dumped_qmap_name = "../qmaps/qmap-" + task_id + ".pickle"
+    dumped_qmap_name = "../qmaps/main_qmap.pickle"
     if os.path.isfile(dumped_qmap_name):
         with open(dumped_qmap_name, "rb") as f:
             qmap = pickle.load(f)
@@ -123,8 +143,8 @@ def learn(task_id):
     #             raise RuntimeError("BAD DUMP")
     return best_sol
 
-for i in range(20):
-    al = learn("prob-011")
+for i in range(10):
+    al = learn("prob-002")
     print("res at i = " + str(i) + ": " + str(len(al)))
-    encoder.Encoder.encodeToFile("../test.sol", al)
+    encoder.Encoder.encodeToFile("../test.sol", [al])
 

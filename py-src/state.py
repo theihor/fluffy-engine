@@ -228,6 +228,7 @@ class State(object):
         for (bot, action) in zip(self.bots, actions):
             if action.validate(self, bot):
                 bot.actions.append(action)
+                self.last_painted = 0
                 action.process(self, bot)
                 bot.process(self)
                 bot.tickTime()
