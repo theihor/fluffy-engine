@@ -213,15 +213,13 @@ class State(object):
     def nextActions(self, actions):
         for (bot, action) in zip(self.bots, actions):
             if action.validate(self, bot):
-                if bot.pos == (50, 105) or str(action)[0] == "B":
-                    print("Exec {} at {}".format(action, bot.pos))
                 bot.actions.append(action)
                 action.process(self, bot)
                 bot.process(self)
                 bot.tickTime()
-            else:
-                raise RuntimeError("Invalid command {} at {} step"
-                                   .format(action, len(bot.actions)))
+            # else:
+            #     raise RuntimeError("Invalid command {} at {} step"
+            #                        .format(action, len(bot.actions)))
         self.repaint()
 
     def nextAction(self, action):

@@ -1,5 +1,7 @@
+import random
+
 import decode
-from constants import ATTACHER
+from constants import *
 from encoder import Encoder
 from actions import *
 import pathfinder
@@ -49,7 +51,8 @@ def selectCommand(state, command, bot_num):
     if TurnLeft().validate(state, bot):
         results.append((left, TurnLeft()))
     bot.turnRight()
-    return max(results, key=lambda t: t[0])[1]
+    command = max(results, key=lambda t: t[0])[1]
+    return command
 
 
 def pathToCommands(path, state, bot_num=0):
@@ -64,20 +67,24 @@ def pathToCommands(path, state, bot_num=0):
 
 
 def collectBoosters(st, bot):
+    interesting = [
+        Booster.WHEEL,
+        Booster.MANIPULATOR,
+        Booster.DRILL,
+    ]
     while True:
         path = pathfinder.bfsFind(st, bot.pos,
-                                  lambda l, x, y: st.cell(x, y)[0] is not None,
+                                  lambda l, x, y: st.cell(x, y)[0] in interesting,
                                   availP=available(st, bot))
         if path is None:
             break
         pathToCommands(path, st)
-        if st.boosters[Booster.DRILL] > 0 and bot.drill_duration <= 0:
-            command = AttachDrill()
-        elif st.boosters[Booster.MANIPULATOR] > 0:
+
+        if st.boosters[Booster.MANIPULATOR] > 0:
             command = AttachManipulator(ATTACHER.get_position(bot))
         # TODO (all boosters)
         else:
-            command = DoNothing()
+            continue
         st.nextAction(command)
 
 
@@ -101,9 +108,24 @@ def closestRotSolver(st):
         path = pathfinder.bfsFind(st, bot.pos,
                                   lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
                                   availP=available(st))
+        if st.boosters[Booster.DRILL] > 0 and bot.drill_duration <= 0:
+            path2 = pathfinder.bfsFind(st, bot.pos,
+                                       lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
+                                       availP=lambda l, x, y: DRILL_DURATION > l or st.cell(x, y)[1] is not Cell.OBSTACLE)
+            if len(path2) < len(path):
+                st.nextAction(AttachDrill())
+                path = path2
         if path is None:
             break
         pathToCommands(path, st)
+        if st.boosters[Booster.WHEEL] > 0 and bot.wheel_duration <= 0:
+            if random.random() > WHEELS_PROC:
+                print("Attach WHEELS at " + str(len(bot.actions)))
+                st.nextAction(AttachWheels())
+        if st.boosters[Booster.DRILL] > 0 and bot.drill_duration <= 0:
+            if random.random() > DRILL_PROC:
+                print("Attach DRILL at " + str(len(bot.actions)))
+                st.nextAction(AttachDrill())
     return st.actions()
 
 
