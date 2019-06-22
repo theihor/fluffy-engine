@@ -1,8 +1,11 @@
 from enum import Enum, auto
 
+from attachdecider import *
+
 DRILL_DURATION = 30
 WHEELS_DURATION = 50
 STRICT_VALIDATION = False
+ATTACHER = SimpleAttacher()
 
 
 class Cell(Enum):
