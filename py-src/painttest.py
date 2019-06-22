@@ -1,7 +1,6 @@
 import unittest
 
 from actions import *
-from decode import parse_task
 
 
 def getCellType(state, x, y):
@@ -42,7 +41,7 @@ class PaintTest(unittest.TestCase):
 
     def testDoMoveWheels(self):
         state = State(self.contour, (1, 1), [], [])
-        state.wheel_duration = 1
+        state.bots[0].wheel_duration = 1
 
         state.nextAction(MoveRight())
 

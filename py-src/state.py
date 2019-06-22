@@ -65,10 +65,7 @@ def cross_point(point, line):
 
 class State(object):
     def __init__(self, contour, botPos: tuple, obstacles, boosters):
-        self.actions = []
-        self.bot = Bot(botPos)
-        self.wheel_duration = 0
-        self.drill_duration = 0
+        self.bots = [Bot(botPos)]
         # map [booster -> amount]
         self.boosters = {
             Booster.DRILL: 0,
@@ -127,11 +124,13 @@ class State(object):
                     self.cells[curY][x] = value
             curY += 1
 
+    # testing only
     def setBotPos(self, x, y):
-        self.bot.pos = (x, y)
+        self.bots[0].pos = (x, y)
 
+    # testing only
     def botPos(self):
-        return self.bot.pos
+        return self.bots[0].pos
 
     def cell(self, x, y):
         return self.cells[y][x]
@@ -203,21 +202,21 @@ class State(object):
             if cell[1] != Cell.OBSTACLE and self.visible((x, y)):
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
 
+    def nextActions(self, actions):
+        for (bot, action) in zip(self.bots, actions):
+            if action.validate(self, bot):
+                bot.actions.append(action)
+                action.process(self, bot)
+                bot.process(self)
+                bot.tickTime()
+        self.repaint()
+
     def nextAction(self, action):
-        if action.validate(self):
-            self.actions += [action]
-            action.process(self)
-            self.tickTime()
-            self.repaint()
+        self.nextActions([action])
 
     def repaint(self):
-        self.bot.process(self)
-
-    def tickTime(self):
-        if self.wheel_duration > 0:
-            self.wheel_duration -= 1
-        if self.drill_duration > 0:
-            self.drill_duration -= 1
+        for bot in self.bots:
+            bot.repaint(self)
 
     def removeBooster(self, pos: tuple):
         self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)

@@ -31,7 +31,7 @@ class BoosterTest(unittest.TestCase):
         state.nextAction(MoveUp())
         state.nextAction(AttachWheels())
 
-        self.assertEqual(WHEELS_DURATION, state.wheel_duration)
+        self.assertEqual(WHEELS_DURATION, state.bots[0].wheel_duration)
         self.assertEqual(0, state.boosters[Booster.WHEEL])
 
     def testAttachDrill(self):
@@ -39,15 +39,16 @@ class BoosterTest(unittest.TestCase):
         state.nextAction(MoveUp())
         state.nextAction(AttachDrill())
 
-        self.assertEqual(DRILL_DURATION, state.drill_duration)
+        self.assertEqual(DRILL_DURATION, state.bots[0].drill_duration)
         self.assertEqual(0, state.boosters[Booster.DRILL])
 
     def testTimings(self):
         state = State(self.contour, (1, 1), [], [(Booster.DRILL, (1, 2))])
-        state.wheel_duration = 20
+        bot = state.bots[0]
+        bot.wheel_duration = 20
         state.nextAction(MoveUp())
         state.nextAction(AttachDrill())
 
-        self.assertEqual(DRILL_DURATION, state.drill_duration)
+        self.assertEqual(DRILL_DURATION, bot.drill_duration)
         self.assertEqual(0, state.boosters[Booster.DRILL])
-        self.assertEqual(18, state.wheel_duration)
+        self.assertEqual(18, bot.wheel_duration)

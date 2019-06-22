@@ -9,6 +9,9 @@ class Bot:
             (1, 1),
             (1, -1),
         ]
+        self.wheel_duration = 0
+        self.drill_duration = 0
+        self.actions = []
 
     def is_attachable(self, x: int, y: int):
         coords = self.manipulators + [(0, 0)]
@@ -41,9 +44,17 @@ class Bot:
         if bot_cell[0] is not None:
             state.removeBooster(self.pos)
             state.boosters[bot_cell[0]] += 1
+        self.repaint(state)
 
+    def repaint(self, state):
         def real(pos):
             return pos[0] + self.pos[0], pos[1] + self.pos[1]
         coords = [real(pos) for pos in self.manipulators] + [self.pos]
         for pos in coords:
             state.paintCell(pos[0], pos[1])
+
+    def tickTime(self):
+        if self.wheel_duration > 0:
+            self.wheel_duration -= 1
+        if self.drill_duration > 0:
+            self.drill_duration -= 1
