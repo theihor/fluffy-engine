@@ -171,10 +171,9 @@ class State(object):
 
 
     def paintCell(self, x, y):
-        if (x >= 0 and x < self.width and y >= 0 and y < self.height):
+        if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
-            if cell[1] != Cell.OBSTACLE:
-                # TODO(visibility handling)
+            if cell[1] != Cell.OBSTACLE and self.visible((x, y)):
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
 
     def nextAction(self, action):

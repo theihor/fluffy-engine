@@ -1,6 +1,7 @@
 import unittest
 
 from actions import *
+from decode import parse_task
 
 
 def getCellType(state, x, y):
@@ -14,6 +15,9 @@ class PaintTest(unittest.TestCase):
         (0, 10),
         (10, 10),
         (10, 0)
+    ]
+    obstacles = [
+        [(2, 1), (2, 2), (3, 2), (3, 1)]
     ]
 
     def testDoNothing(self):
@@ -117,3 +121,19 @@ class PaintTest(unittest.TestCase):
         self.assertEqual(Cell.CLEAN, getCellType(state, 2, 0))
         self.assertEqual(Cell.CLEAN, getCellType(state, 2, 1))
         self.assertEqual(Cell.CLEAN, getCellType(state, 2, 2))
+
+    def testVisibility(self):
+        state = State(self.contour, (1, 0), [], [])
+        state.boosters[Booster.MANIPULATOR] = 1
+        state.nextAction(AttachManipulator((1, 2)))
+
+        self.assertEqual(Cell.CLEAN, getCellType(state, 2, 2))
+
+        state = State(self.contour, (1, 0), self.obstacles, [])
+        state.boosters[Booster.MANIPULATOR] = 2
+        state.nextAction(AttachManipulator((1, 2)))
+        state.nextAction(AttachManipulator((1, 3)))
+
+        self.assertEqual(Cell.ROT, getCellType(state, 2, 2))
+        self.assertEqual(Cell.CLEAN, getCellType(state, 2, 3))
+
