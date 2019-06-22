@@ -217,6 +217,9 @@ class State(object):
                 action.process(self, bot)
                 bot.process(self)
                 bot.tickTime()
+            else:
+                raise RuntimeError("Invalid command {} at {} step"
+                                   .format(action, len(bot.actions)))
         self.repaint()
 
     def nextAction(self, action):

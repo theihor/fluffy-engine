@@ -1,4 +1,5 @@
 import decode
+from constants import ATTACHER
 from encoder import Encoder
 from actions import *
 import pathfinder
@@ -62,12 +63,7 @@ def pathToCommands(path, state, bot_num=0):
         state.nextAction(command)
 
 
-# left-right direction
-LR = 1
-
-
 def collectBoosters(st, bot):
-    global LR
     while True:
         path = pathfinder.bfsFind(st, bot.pos,
                                   lambda l, x, y: st.cell(x, y)[0] == Booster.MANIPULATOR)
@@ -75,21 +71,8 @@ def collectBoosters(st, bot):
             break
         pathToCommands(path, st)
 
-        turns = 0
-        while bot.manipulators[0] != (1, 0):
-            turns += 1
-            bot.turnLeft()
-        idx = 2
-        while not bot.is_attachable(1, idx * LR):
-            idx += 1
-        pos = (1, idx * LR)
-
-        LR *= -1
-        while turns > 0:
-            turns -= 1
-            bot.turnRight()
-            pos = (pos[1], -pos[0])
-        st.nextAction(AttachManipulator(pos))
+        cmd = AttachManipulator(ATTACHER.get_position(bot))
+        st.nextAction(cmd)
 
 
 def closestRotSolver(st):
@@ -111,6 +94,7 @@ def numCleaned(st, pos, botnum):
     def inc():
         nonlocal num
         num += 1
+
     bot.repaintWith(pos, st, lambda x, y: inc())
     return num
 
@@ -133,7 +117,7 @@ def closestRotInBlob(st, blob=None, blobRanks=None):
     if path is None:
         return None
     pathToCommands(path, st)
-    return path[len(path)-1]
+    return path[len(path) - 1]
 
 
 def blobClosestRotSolver(st):
@@ -156,15 +140,17 @@ def blobClosestRotSolver(st):
                                                in blobs[i])
                 if otherPath is None:
                     return False
-                otherPos = otherPath[len(otherPath)-1]
+                otherPos = otherPath[len(otherPath) - 1]
                 otherBlob = findBlob(otherPos)
                 blobs[i] = otherBlob.union(blobs[i])
                 blobs.remove(otherBlob)
                 return True
         return False
+
     for it in range(1000):
         optimizeBlob()
     return solveWithBlobs(st, blobs)
+
 
 # solve('/home/myth/projects/fluffy-engine/desc/prob-047.desc', '/home/myth/projects/fluffy-engine/sol/sol-047.sol', blobClosestRotSolver)
 
@@ -178,6 +164,7 @@ def solveWithBlobs(st, blobs):
             if pos in blob:
                 return blob
         return None
+
     curPos = st.botPos()
     while True:
         blob = findBlob(curPos)
@@ -187,6 +174,7 @@ def solveWithBlobs(st, blobs):
 
         def add(l, x, y):
             blobRanks[(x, y)] = l
+
         pathfinder.bfsFind(st, curPos,
                            lambda l, x, y: False,
                            register=add)
