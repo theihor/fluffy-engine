@@ -99,6 +99,51 @@ def bfsFindClosest(state, start, endP, availP=lambda x, y: True,
     return path
 
 
+def bfsFindMany(state, start, endP, availP=lambda x, y: True):
+    prev = [row[:] for row in [[None] * state.width]
+            * state.height]
+
+    def available(x, y):
+        return (x >= 0 and x < state.width
+                and y >= 0 and y < state.height
+                and state.cell(x, y)[1] is not Cell.OBSTACLE
+                and prev[y][x] is None
+                and availP(x, y)
+                and (x != start[0] or y != start[1]))
+    front = [start]
+    found = []
+    while len(front) != 0:
+        # print('Front = ', front)
+        newFront = []
+        for (x, y) in front:
+            for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                x1 = x + dx
+                y1 = y + dy
+                if available(x1, y1):
+                    # print('avail ', (x1, y1))
+                    prev[y1][x1] = (x, y)
+                    if endP(x1, y1):
+                        found.append((x1, y1))
+                    else:
+                        newFront.append((x1, y1))
+        front = newFront
+    if len(found) == 0:
+        return None
+    paths = []
+    for oneTarget in found:
+        (curX, curY) = oneTarget
+        path = [(curX, curY)]
+        while True:
+            prevPos = prev[curY][curX]
+            if prevPos == start:
+                break
+            path.append(prevPos)
+            (curX, curY) = prevPos
+        path.reverse()
+        paths.append(path)
+    return paths
+
+
 def blobSplit(state, blobSize):
     filled = [row[:] for row in [[False] * state.width]
               * state.height]

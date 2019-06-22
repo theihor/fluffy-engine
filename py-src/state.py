@@ -78,6 +78,13 @@ class State(object):
             if len(obstacle) > 0:
                 self.fillContour(obstacle, (None, Cell.OBSTACLE))
         self.addBoosters(boosters)
+        self.numRot = 0
+        self.tickNum = 0
+        for y in range(self.height):
+            for x in range(self.width):
+                (booster, cell) = self.cells[y][x]
+                if cell is Cell.ROT:
+                    self.numRot += 1
         self.repaint()
 
     def addBoosters(self, boosters):
@@ -201,7 +208,8 @@ class State(object):
     def paintCell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
-            if cell[1] != Cell.OBSTACLE and self.visible((x, y)):
+            if cell[1] == Cell.ROT and self.visible((x, y)):
+                self.numRot -= 1
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
 
     def tryPaintCellWith(self, bx, by, x, y, func):
@@ -217,6 +225,7 @@ class State(object):
                 action.process(self, bot)
                 bot.process(self)
                 bot.tickTime()
+        self.tickNum += 1
         self.repaint()
 
     def nextAction(self, action):
