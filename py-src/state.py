@@ -198,7 +198,7 @@ class State(object):
     def paintCell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
-            if cell[1] != Cell.OBSTACLE and self.visible((x, y)):
+            if cell[1] == Cell.ROT and self.visible((x, y)):
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
 
     def tryPaintCellWith(self, x, y, func):

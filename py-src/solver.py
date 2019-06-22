@@ -1,8 +1,6 @@
-from constants import Booster
-from state import State, Cell
 import decode
 from encoder import Encoder
-from actions import MoveUp, MoveDown, MoveLeft, MoveRight, AttachManipulator
+from actions import *
 import pathfinder
 
 
@@ -26,11 +24,42 @@ def moveCommand(posFrom, posTo):
         return MoveRight()
 
 
-def pathToCommands(path):
+def selectCommand(state, command, bot_num):
+    results = []
+    bot = state.bots[bot_num]
+    (x, y) = bot.pos
+    current = len(bot.manipulators)
+    if isinstance(command, MoveUp):
+        current = numCleaned(state, (x, y + 1), bot_num)
+    elif isinstance(command, MoveDown):
+        current = numCleaned(state, (x, y - 1), bot_num)
+    elif isinstance(command, MoveRight):
+        current = numCleaned(state, (x + 1, y), bot_num)
+    elif isinstance(command, MoveLeft):
+        current = numCleaned(state, (x - 1, y), bot_num)
+    results.append((current, command))
+    bot.turnRight()
+    right = numCleaned(state, bot.pos, bot_num)
+    if TurnRight().validate(state, bot):
+        results.append((right, TurnRight()))
+    bot.turnLeft()
+    bot.turnLeft()
+    left = numCleaned(state, bot.pos, bot_num)
+    if TurnLeft().validate(state, bot):
+        results.append((left, TurnLeft()))
+    bot.turnRight()
+    return max(results, key=lambda t: t[0])[1]
+
+
+def pathToCommands(path, state, bot_num=0):
     commands = []
     for (pos, nextPos) in zip(path, path[1:]):
         commands.append(moveCommand(pos, nextPos))
-    return commands
+    for command in commands:
+        new = selectCommand(state, command, bot_num)
+        if new != command:
+            state.nextAction(new)
+        state.nextAction(command)
 
 
 # left-right direction
@@ -44,9 +73,7 @@ def collectBoosters(st, bot):
                                   lambda l, x, y: st.cell(x, y)[0] == Booster.MANIPULATOR)
         if path is None:
             break
-        commands = pathToCommands(path)
-        for command in commands:
-            st.nextAction(command)
+        pathToCommands(path, st)
 
         turns = 0
         while bot.manipulators[0] != (1, 0):
@@ -73,9 +100,7 @@ def closestRotSolver(st):
                                   lambda l, x, y: st.cell(x, y)[1] == Cell.ROT)
         if path is None:
             break
-        commands = pathToCommands(path)
-        for command in commands:
-            st.nextActions([command])
+        pathToCommands(path, st)
     return st.actions()
 
 
@@ -86,7 +111,7 @@ def numCleaned(st, pos, botnum):
     def inc():
         nonlocal num
         num += 1
-    bot.repaintWith(pos, st, lambda x, y: inc)
+    bot.repaintWith(pos, st, lambda x, y: inc())
     return num
 
 
@@ -107,9 +132,7 @@ def closestRotInBlob(st, blob=None, blobRanks=None):
              -numCleaned(st, (x, y), 0)))
     if path is None:
         return None
-    commands = pathToCommands(path)
-    for command in commands:
-        st.nextAction(command)
+    pathToCommands(path, st)
     return path[len(path)-1]
 
 
