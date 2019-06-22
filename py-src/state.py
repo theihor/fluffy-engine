@@ -202,7 +202,6 @@ class State(object):
 
 
     def paintCells(self, coords):
-        self.last_painted = 0
         for pos in coords:
             self.paintCell(*pos)
 
@@ -220,6 +219,7 @@ class State(object):
     def nextAction(self, action):
         if action.validate(self):
             self.actions += [action]
+            self.last_painted = 0
             action.process(self)
             self.tickTime()
             self.repaint()
