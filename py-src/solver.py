@@ -55,7 +55,8 @@ def collectBoosters(st, bot):
         idx = 2
         while not bot.is_attachable(1, idx * LR):
             idx += 1
-        pos = (idx * LR, 1)
+        pos = (1, idx * LR)
+
         LR *= -1
         while turns > 0:
             turns -= 1
