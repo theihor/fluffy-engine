@@ -80,7 +80,6 @@ class ActionTest(unittest.TestCase):
         self.assertEqual((0, 1), state.botPos())
         state.nextAction(MoveDown())
         self.assertEqual((0, 0), state.botPos())
-        state.nextAction(MoveDown())
         self.assertEqual((0, 0), state.botPos())
         self.assertEqual(2, state.bots[0].wheel_duration)
 
