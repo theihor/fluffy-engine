@@ -58,7 +58,7 @@ class Bot:
             return pos[0] + fromPos[0], pos[1] + fromPos[1]
         coords = [real(pos) for pos in self.manipulators] + [fromPos]
         for (x, y) in coords:
-            state.tryPaintCellWith(x, y, func)
+            state.tryPaintCellWith(fromPos[0], fromPos[1], x, y, func)
 
     def tickTime(self):
         if self.wheel_duration > 0:
