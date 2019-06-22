@@ -128,7 +128,7 @@ def closestRotInBlob(st, blob=None, blobRanks=None):
             lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
             availP=lambda x, y: (x, y) in blob,
             rank=lambda x, y:
-            (blobRanks[(x, y)] or 99999,
+            (blobRanks.get((x, y)) or 99999,
              -numCleaned(st, (x, y), 0)))
     if path is None:
         return None
@@ -137,7 +137,7 @@ def closestRotInBlob(st, blob=None, blobRanks=None):
 
 
 def blobClosestRotSolver(st):
-    blobs = pathfinder.blobSplit(st, 500)
+    blobs = pathfinder.blobSplit(st, 100000)
 
     def findBlob(pos):
         for blob in blobs:
@@ -147,7 +147,7 @@ def blobClosestRotSolver(st):
 
     def optimizeBlob():
         for i in range(len(blobs)):
-            if (len(blobs[i]) < 20):
+            if (len(blobs[i]) < 10):
                 pos = next(iter(blobs[i]))
                 otherPath = pathfinder.bfsFind(st, pos,
                                                lambda l, x, y:
@@ -170,6 +170,8 @@ def blobClosestRotSolver(st):
 
 
 def solveWithBlobs(st, blobs):
+    bot = st.bots[0]
+    collectBoosters(st, bot)
 
     def findBlob(pos):
         for blob in blobs:
@@ -189,7 +191,7 @@ def solveWithBlobs(st, blobs):
                            lambda l, x, y: False,
                            register=add)
         while True:
-            nextPos = closestRotInBlob(st, blob, blobRanks)
+            nextPos = closestRotInBlob(st, blob, {})
             if nextPos is None:
                 break
         curPos = closestRotInBlob(st)
