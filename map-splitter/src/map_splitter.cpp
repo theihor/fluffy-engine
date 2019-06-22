@@ -3,12 +3,14 @@
 #include <iostream>
 #include <fstream>
 #include <iterator>
+#include <random>
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Boolean_set_operations_2.h>
 #include <CGAL/Polygon_set_2.h>
 #include <CGAL/Polygon_vertical_decomposition_2.h>
+#include <CGAL/Polygon_convex_decomposition_2.h>
 
 #include "ast.hpp"
 #include "task_parser.hpp"
@@ -28,6 +30,8 @@ typedef CGAL::Polygon_2<K> cg_polygon;
 typedef CGAL::Polygon_with_holes_2<K> cg_polygon_with_holes;
 typedef CGAL::Polygon_set_2<K> cg_polygon_set;
 typedef CGAL::Polygon_vertical_decomposition_2<K> cg_vertical_decomposition;
+typedef CGAL::Greene_convex_decomposition_2<K> cg_greeny_decomposition;
+typedef CGAL::Optimal_convex_decomposition_2<K> cg_optimal_decomposition;
 
 string to_string(point_t &point) {
     string str;
@@ -59,22 +63,42 @@ cg_polygon polygon_for_map(map_t &map) {
     return cg_polygon(points.begin(), points.end());
 }
 
-void polygons_for_task(task_t &task, vector<cg_polygon_with_holes> &out) {
+void split_into_convex_polygons_1(task_t &task, vector<cg_polygon> &out) {
     auto set = cg_polygon_set();
     auto map_poly = polygon_for_map(task.map);
     set.insert(map_poly);
     for (auto it = task.obstacles.begin(); it != task.obstacles.end(); ++it) {
         set.difference(polygon_for_map(**it));
     }
-    set.polygons_with_holes(back_inserter(out));
-}
+    vector<cg_polygon_with_holes> polygons;
+    set.polygons_with_holes(back_inserter(polygons));
 
-void split_into_convex_polygons(vector<cg_polygon_with_holes> &polygons, vector<cg_polygon> &out) {
     auto decomposition = cg_vertical_decomposition();
     for (auto it = polygons.begin(); it != polygons.end(); ++it) {
         decomposition(*it, back_inserter(out));
     }
 }
+
+// void split_into_convex_polygons_2(task_t &task, vector<cg_polygon> &out) {
+//     auto set = cg_polygon_set();
+//     auto map_poly = polygon_for_map(task.map);
+//     auto optimal_decomposition = cg_greeny_decomposition();
+//     auto decomposed_map = vector<cg_polygon>();
+//     optimal_decomposition(map_poly, back_inserter(decomposed_map));
+//     for (auto it = decomposed_map.begin(); it != decomposed_map.end(); ++it) {
+//         set.join(*it);
+//     }
+//     for (auto it = task.obstacles.begin(); it != task.obstacles.end(); ++it) {
+//         set.difference(polygon_for_map(**it));
+//     }
+//     vector<cg_polygon_with_holes> polygons;
+//     set.polygons_with_holes(back_inserter(polygons));
+
+//     auto decomposition = cg_vertical_decomposition();
+//     for (auto it = polygons.begin(); it != polygons.end(); ++it) {
+//         decomposition(*it, back_inserter(out));
+//     }
+// }
 
 void show_map(const char *indent, map_t &map) {
     for (auto it = map.begin(); it != map.end(); ++it) {
@@ -163,8 +187,70 @@ public:
     }
 };
 
-const char * svg_colors[] = {
-    "black", "grey", "darkgrey"
+const vector<const char*> svg_colors = {
+"AliceBlue",
+"AntiqueWhite",
+"Aqua",
+"Aquamarine",
+"Azure",
+"Beige",
+"Bisque",
+"BlanchedAlmond",
+"Chocolate",
+"Coral",
+"CornflowerBlue",
+"Cornsilk",
+"Crimson",
+"Cyan",
+"DarkBlue",
+"DarkKhaki",
+"DarkMagenta",
+"DarkOliveGreen",
+"DarkOrange",
+"DarkOrchid",
+"DarkRed",
+"DarkSalmon",
+"DarkSeaGreen",
+"DarkSlateGrey",
+"DarkTurquoise",
+"DarkViolet",
+"DeepPink",
+"DeepSkyBlue",
+"DimGrey",
+"DodgerBlue",
+"FireBrick",
+"Green",
+"GreenYellow",
+"HoneyDew",
+"HotPink",
+"IndianRed",
+"LightGoldenRodYellow",
+"LightGray",
+"LightGrey",
+"LightSeaGreen",
+"LightSkyBlue",
+"LightSteelBlue",
+"Maroon",
+"MediumAquaMarine",
+"MediumBlue",
+"MistyRose",
+"Moccasin",
+"OldLace",
+"Olive",
+"Peru",
+"Pink",
+"Plum",
+"RebeccaPurple",
+"Red",
+"SlateBlue",
+"SlateGray",
+"Tan",
+"Teal",
+"Turquoise",
+"Violet",
+"Wheat",
+"Yellow",
+"YellowGreen ",
 };
 
 class svg_output_visitor: public poly_visitor {
@@ -184,10 +270,10 @@ public:
     }
     virtual void start_poly() {
         svg << "  <polygon "
-            << "fill=\"none\" stroke=\""
-            << svg_colors[color_index]
-            << "\" points=\"";
-        color_index = (color_index + 1) % 3;
+            << " stroke=\"" << svg_colors[color_index] << "\""
+            << " fill=\"" << svg_colors[color_index] << "\""
+            << " points=\"";
+        color_index = rand() % svg_colors.size();
     }
     virtual void end_poly() {
         svg << "\"/>\n";
@@ -217,10 +303,8 @@ int main(int argc, char **argv) {
     show_ast(*task);
     fclose(yyin);
 
-    vector<cg_polygon_with_holes> task_polys;
     vector<cg_polygon> convex_polys; 
-    polygons_for_task(*task, task_polys);
-    split_into_convex_polygons(task_polys, convex_polys);
+    split_into_convex_polygons_1(*task, convex_polys);
 
     cout << "split into " << to_string(convex_polys.size()) << " convex parts\n";
 
