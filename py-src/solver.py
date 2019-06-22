@@ -38,6 +38,7 @@ LR = 1
 
 
 def collectBoosters(st):
+    global LR
     while True:
         path = pathfinder.bfsFind(st, st.botPos(),
                                   lambda x, y: st.cell(x, y)[0] == Booster.MANIPULATOR)
@@ -55,6 +56,7 @@ def collectBoosters(st):
         while not st.bot.is_attachable(idx * LR, 1):
             idx += 1
         pos = (idx * LR, 1)
+        LR *= -1
         while turns > 0:
             turns -= 1
             st.bot.turnRight()
