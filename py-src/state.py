@@ -27,22 +27,32 @@ def line_intersection(line1, line2):
 
 def cross_point(point, line):
     """Check whether the cell on point is crossed by line"""
-    ((x1, y1), (x2, y2)) = line
     (ix, iy) = point
 
     cross_points = []
+
+    def point_on_line(p, l):
+        # l must be vertical or horisontal
+        print("point " + str(p) + "on " + str(l))
+        ((x1, y1), (x2, y2)) = l
+        return (p[0] == x1 == x2 and min(y1, y2) < p[1] < max(y1, y2)) or \
+               (p[1] == y1 == y2 and min(x1, x2) < p[0] < max(x1, x2))
 
     for dx in range(2):
         for dy in range(2):
             line2 = ((ix, iy), (ix + dx, iy + dy))
             p = line_intersection(line, line2)
-            if p: cross_points.append(p)
+            r = point_on_line(p, line2)
+            print(r)
+            if p and point_on_line(p, line2):
+                cross_points.append(p)
+            (ix, iy) = line2[1]
 
     if cross_points and cross_points[0] != cross_points[1]:
-        #print(str(point) + " crossed! " + str(cross_points))
+        print(str(point) + " crossed! " + str(cross_points))
         return True
     else:
-        #print(str(point) + " not crossed!")
+        print(str(point) + " not crossed!")
         return False
 
 
@@ -147,7 +157,7 @@ class State(object):
         y = y1
 
         while x != x2 and y != y2:
-         #   print("cheking " + str(x) + " " + str(y))
+            print("cheking " + str(x) + " " + str(y))
             p1 = (x + dx, y)
             if cross_point(p1, line):
                 if is_obstacle(*p1):
