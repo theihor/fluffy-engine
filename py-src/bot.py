@@ -1,4 +1,4 @@
-from constants import STRICT_VALIDATION
+from constants import STRICT_VALIDATION, Booster
 
 
 class Bot:
@@ -37,6 +37,11 @@ class Bot:
         self.manipulators = [new(pos) for pos in self.manipulators]
 
     def process(self, state):
+        bot_cell = state.cell(self.pos[0], self.pos[1])
+        if bot_cell[0] is not None:
+            state.removeBooster(self.pos)
+            state.boosters[bot_cell[0]] += 1
+
         def real(pos):
             return pos[0] + self.pos[0], pos[1] + self.pos[1]
         coords = [real(pos) for pos in self.manipulators] + [self.pos]

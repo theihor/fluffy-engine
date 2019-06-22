@@ -62,7 +62,13 @@ class State(object):
         for obstacle in obstacles:
             if len(obstacle) > 0:
                 self.fillContour(obstacle, (None, Cell.OBSTACLE))
+        self.addBoosters(boosters)
         self.repaint()
+
+    def addBoosters(self, boosters):
+        for booster in boosters:
+            (x, y) = booster[1]
+            self.cells[y][x] = (booster[0], Cell.ROT)
 
     def decode(d):
         return State(d['map'], d['start'], d['obstacles'], d['boosters'])
@@ -186,6 +192,9 @@ class State(object):
             self.wheel_duration -= 1
         if self.drill_duration > 0:
             self.drill_duration -= 1
+
+    def removeBooster(self, pos: tuple):
+        self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
 
     def show(self):
         for y in reversed(range(self.height)):
