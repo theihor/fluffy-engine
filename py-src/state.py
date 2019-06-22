@@ -213,6 +213,8 @@ class State(object):
     def nextActions(self, actions):
         for (bot, action) in zip(self.bots, actions):
             if action.validate(self, bot):
+                if bot.pos == (50, 105) or str(action)[0] == "B":
+                    print("Exec {} at {}".format(action, bot.pos))
                 bot.actions.append(action)
                 action.process(self, bot)
                 bot.process(self)
@@ -231,6 +233,7 @@ class State(object):
     def repaint(self):
         for bot in self.bots:
             bot.repaint(self)
+            self.cells[bot.pos[1]][bot.pos[0]] = (None, Cell.CLEAN)
 
     def removeBooster(self, pos: tuple):
         self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)

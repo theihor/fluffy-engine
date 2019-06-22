@@ -66,21 +66,32 @@ def pathToCommands(path, state, bot_num=0):
 def collectBoosters(st, bot):
     while True:
         path = pathfinder.bfsFind(st, bot.pos,
-                                  lambda l, x, y: st.cell(x, y)[0] == Booster.MANIPULATOR)
+                                  lambda l, x, y: st.cell(x, y)[0] is not None,
+                                  availP=available(st, bot))
         if path is None:
             break
         pathToCommands(path, st)
-
-        if st.boosters[Booster.WHEEL] > 0 and bot.wheel_duration <= 0:
-            command = AttachWheels()
-        elif st.boosters[Booster.DRILL] > 0 and bot.drill_duration <= 0:
+        if st.boosters[Booster.DRILL] > 0 and bot.drill_duration <= 0:
             command = AttachDrill()
         elif st.boosters[Booster.MANIPULATOR] > 0:
             command = AttachManipulator(ATTACHER.get_position(bot))
         # TODO (all boosters)
         else:
-            return
+            command = DoNothing()
         st.nextAction(command)
+
+
+def available(state, bot=None):
+    if bot is None:
+        bot = state.bots[0]
+    drill = bot.drill_duration
+    wheel = bot.wheel_duration
+
+    def drill_aval(l):
+        # TODO (wheel handling)
+        return drill > l
+
+    return lambda l, x, y: drill_aval(l) or state.cell(x, y)[1] is not Cell.OBSTACLE
 
 
 def closestRotSolver(st):
@@ -88,7 +99,8 @@ def closestRotSolver(st):
     collectBoosters(st, bot)
     while True:
         path = pathfinder.bfsFind(st, bot.pos,
-                                  lambda l, x, y: st.cell(x, y)[1] == Cell.ROT)
+                                  lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
+                                  availP=available(st))
         if path is None:
             break
         pathToCommands(path, st)
