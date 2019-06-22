@@ -53,7 +53,7 @@ def collectBoosters(st):
             turns += 1
             st.bot.turnLeft()
         idx = 2
-        while not st.bot.is_attachable(idx * LR, 1):
+        while not st.bot.is_attachable(1, idx * LR):
             idx += 1
         pos = (idx * LR, 1)
         LR *= -1
