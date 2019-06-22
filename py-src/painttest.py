@@ -18,7 +18,6 @@ class PaintTest(unittest.TestCase):
 
     def testDoNothing(self):
         state = State(self.contour, (1, 1), [], [])
-        self.assertEqual(Cell.ROT, getCellType(state, 1, 1))
 
         state.nextAction(DoNothing())
 
@@ -29,7 +28,6 @@ class PaintTest(unittest.TestCase):
 
     def testDoMove(self):
         state = State(self.contour, (1, 1), [], [])
-        self.assertEqual(Cell.ROT, getCellType(state, 1, 1))
 
         state.nextAction(MoveRight())
 
@@ -41,7 +39,6 @@ class PaintTest(unittest.TestCase):
     def testDoMoveWheels(self):
         state = State(self.contour, (1, 1), [], [])
         state.wheel_duration = 1
-        self.assertEqual(Cell.ROT, getCellType(state, 1, 1))
 
         state.nextAction(MoveRight())
 
@@ -112,3 +109,11 @@ class PaintTest(unittest.TestCase):
         self.assertEqual(Cell.CLEAN, getCellType(state, 4, 4))
         self.assertEqual(Cell.CLEAN, getCellType(state, 4, 5))
         self.assertEqual(Cell.CLEAN, getCellType(state, 4, 6))
+
+    def testInitial(self):
+        state = State(self.contour, (1, 1), [], [])
+
+        self.assertEqual(Cell.CLEAN, getCellType(state, 1, 1))
+        self.assertEqual(Cell.CLEAN, getCellType(state, 2, 0))
+        self.assertEqual(Cell.CLEAN, getCellType(state, 2, 1))
+        self.assertEqual(Cell.CLEAN, getCellType(state, 2, 2))

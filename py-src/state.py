@@ -62,6 +62,7 @@ class State(object):
         for obstacle in obstacles:
             if len(obstacle) > 0:
                 self.fillContour(obstacle, (None, Cell.OBSTACLE))
+        self.repaint()
 
     def decode(d):
         return State(d['map'], d['start'], d['obstacles'], d['boosters'])
