@@ -18,13 +18,13 @@ class EncoderTest(unittest.TestCase):
     task_no = 1
 
     def testEncodeFileExists(self):
-        Encoder.encode(self.task_no, self.actions)
+        Encoder.encodeToFile(self.filename, self.actions)
         self.addCleanup(lambda: os.remove(self.filename))
 
         self.assertTrue(os.path.isfile(self.filename))
 
     def testEncodeValue(self):
-        Encoder.encode(self.task_no, self.actions)
+        Encoder.encodeToFile(self.filename, self.actions)
         self.addCleanup(lambda: os.remove(self.filename))
         file = open(self.filename)
         result = file.readline()

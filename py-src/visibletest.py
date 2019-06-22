@@ -5,7 +5,7 @@ from state import *
 
 
 class ActionTest(unittest.TestCase):
-    state = State.decode(parse_task("../../example-01/example-01.desc"))
+    state = State.decode(parse_task("../examples/example-01.desc"))
 
     def testAdjacent(self):
         self.state.setBotPos(3, 2)
