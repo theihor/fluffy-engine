@@ -1,7 +1,8 @@
+from constants import Booster
 from state import State, Cell
 import decode
 from encoder import Encoder
-from actions import MoveUp, MoveDown, MoveLeft, MoveRight
+from actions import MoveUp, MoveDown, MoveLeft, MoveRight, AttachManipulator
 import pathfinder
 
 
@@ -32,7 +33,39 @@ def pathToCommands(path):
     return commands
 
 
+# left-right direction
+LR = 1
+
+
+def collectBoosters(st):
+    global LR
+    while True:
+        path = pathfinder.bfsFind(st, st.botPos(),
+                                  lambda x, y: st.cell(x, y)[0] == Booster.MANIPULATOR)
+        if path is None:
+            break
+        commands = pathToCommands(path)
+        for command in commands:
+            st.nextAction(command)
+
+        turns = 0
+        while st.bot.manipulators[0] != (1, 0):
+            turns += 1
+            st.bot.turnLeft()
+        idx = 2
+        while not st.bot.is_attachable(1, idx * LR):
+            idx += 1
+        pos = (idx * LR, 1)
+        LR *= -1
+        while turns > 0:
+            turns -= 1
+            st.bot.turnRight()
+            pos = (pos[1], -pos[0])
+        st.nextAction(AttachManipulator(pos))
+
+
 def closestRotSolver(st):
+    collectBoosters(st)
     while True:
         path = pathfinder.bfsFind(st, st.botPos(),
                                   lambda x, y: st.cell(x, y)[1] == Cell.ROT)
