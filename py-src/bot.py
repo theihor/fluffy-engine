@@ -45,5 +45,4 @@ class Bot:
         def real(pos):
             return pos[0] + self.pos[0], pos[1] + self.pos[1]
         coords = [real(pos) for pos in self.manipulators] + [self.pos]
-        for pos in coords:
-            state.paintCell(pos[0], pos[1])
+        state.paintCells(coords)

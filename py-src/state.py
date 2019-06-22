@@ -69,6 +69,8 @@ class State(object):
         self.bot = Bot(botPos)
         self.wheel_duration = 0
         self.drill_duration = 0
+        self.last_painted = 0
+        self.total_rot_cells = 0
         # map [booster -> amount]
         self.boosters = {
             Booster.DRILL: 0,
@@ -124,6 +126,8 @@ class State(object):
                 for x in range(curedges[ind].x, curedges[ind + 1].x):
                     # print(x, curY)
                     self.cells[curY][x] = value
+                    if value[1] == Cell.ROT:
+                        self.total_rot_cells += 1
             curY += 1
 
     def setBotPos(self, x, y):
@@ -196,10 +200,20 @@ class State(object):
         return True
 
 
+    def paintCells(self, coords):
+        self.last_painted = 0
+        for pos in coords:
+            self.paintCell(*pos)
+
+
     def paintCell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
             if cell[1] != Cell.OBSTACLE and self.visible((x, y)):
+                (_, prev_state) = self.cells[y][x]
+                if prev_state == Cell.ROT:
+                    self.last_painted += 1
+                    self.total_rot_cells -= 1
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
 
     def nextAction(self, action):
@@ -232,3 +246,6 @@ class State(object):
                     ch = 'o'
                 print(ch, end='')
             print()
+
+    def is_all_clean(self):
+        return self.total_rot_cells <= 0
