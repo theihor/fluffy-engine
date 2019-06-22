@@ -182,12 +182,12 @@ class State(object):
             self.actions += [action]
             action.process(self)
             self.tickTime()
+            self.repaint()
 
     def repaint(self):
         self.bot.process(self)
 
     def tickTime(self):
-        self.repaint()
         if self.wheel_duration > 0:
             self.wheel_duration -= 1
         if self.drill_duration > 0:
