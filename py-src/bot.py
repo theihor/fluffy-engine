@@ -53,6 +53,13 @@ class Bot:
         for pos in coords:
             state.paintCell(pos[0], pos[1])
 
+    def repaintWith(self, fromPos, state, func):
+        def real(pos):
+            return pos[0] + fromPos[0], pos[1] + fromPos[1]
+        coords = [real(pos) for pos in self.manipulators] + [fromPos]
+        for (x, y) in coords:
+            state.tryPaintCellWith(x, y, func)
+
     def tickTime(self):
         if self.wheel_duration > 0:
             self.wheel_duration -= 1
