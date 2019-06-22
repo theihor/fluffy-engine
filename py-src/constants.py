@@ -16,3 +16,10 @@ class Booster(Enum):
     DRILL = auto()
     MANIPULATOR = auto()
     MYSTERIOUS = auto()
+
+
+class Direction(Enum):
+    UP = auto()
+    DOWN = auto()
+    LEFT = auto()
+    RIGHT = auto()
