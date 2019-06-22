@@ -182,7 +182,7 @@ class State(object):
         x = x1
         y = y1
 
-        while x != x2 and y != y2:
+        while x != x2 or y != y2:
             #print("cheking " + str(x) + " " + str(y))
             p1 = (x + dx, y)
             if cross_point(p1, line):
@@ -225,7 +225,10 @@ class State(object):
                 action.process(self, bot)
                 bot.process(self)
                 bot.tickTime()
-        self.tickNum += 1
+            else:
+                raise RuntimeError("Invalid command {} at {} step"
+                                   .format(action, len(bot.actions)))
+            self.tickNum += 1
         self.repaint()
 
     def nextAction(self, action):
