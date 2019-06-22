@@ -29,7 +29,7 @@ class ActionTest(unittest.TestCase):
     def testLine(self):
         self.state.setBotPos(3, 2)
 
-        self.assertTrue(self.state.visible((5, 0)))
+        self.assertTrue(self.state.visible((4, 0)))
         self.assertTrue(self.state.visible((1, 0)))
         self.assertTrue(self.state.visible((1, 4)))
         self.assertFalse(self.state.visible((6, 0)))
@@ -38,8 +38,8 @@ class ActionTest(unittest.TestCase):
         self.assertFalse(self.state.visible((7, 7)))
 
     def testCorner(self):
-        self.state.setBotPos(3, 4)
+        self.state.setBotPos(3, 5)
 
-        self.assertFalse(self.state.visible((4, 6)))
         self.assertFalse(self.state.visible((4, 7)))
-        self.assertFalse(self.state.visible((4, 9)))
+        self.assertTrue(self.state.visible((4, 8)))
+        self.assertTrue(self.state.visible((4, 9)))

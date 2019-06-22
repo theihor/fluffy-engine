@@ -29,31 +29,38 @@ def cross_point(point, line):
     """Check whether the cell on point is crossed by line"""
     (ix, iy) = point
 
-    cross_points = []
+    cross_points = set()
 
     def point_on_line(p, l):
         # l must be vertical or horisontal
-        print("point " + str(p) + "on " + str(l))
+        # print("point " + str(p) + " on " + str(l))
         ((x1, y1), (x2, y2)) = l
-        return (p[0] == x1 == x2 and min(y1, y2) < p[1] < max(y1, y2)) or \
-               (p[1] == y1 == y2 and min(x1, x2) < p[0] < max(x1, x2))
+        return (p[0] == x1 == x2 and min(y1, y2) <= p[1] <= max(y1, y2)) or \
+               (p[1] == y1 == y2 and min(x1, x2) <= p[0] <= max(x1, x2))
 
-    for dx in range(2):
-        for dy in range(2):
-            line2 = ((ix, iy), (ix + dx, iy + dy))
-            p = line_intersection(line, line2)
-            r = point_on_line(p, line2)
-            print(r)
-            if p and point_on_line(p, line2):
-                cross_points.append(p)
-            (ix, iy) = line2[1]
+    sides = []
+    l = ((ix, iy), (ix, iy + 1)) # left-down -> left-up
+    sides.append(l)
+    l = ((ix, iy + 1), (ix + 1, iy + 1))  # left-up -> right-up
+    sides.append(l)
+    l = ((ix + 1, iy), (ix + 1, iy + 1))  # right-down -> right-up
+    sides.append(l)
+    l = ((ix, iy), (ix + 1, iy))  # left-down -> right-down
+    sides.append(l)
 
-    if cross_points and cross_points[0] != cross_points[1]:
-        print(str(point) + " crossed! " + str(cross_points))
+    for side in sides:
+        p = line_intersection(line, side)
+        if p:
+            r = point_on_line(p, side)
+            #print(r)
+            if r: cross_points.add(p)
+    if len(cross_points) == 2:
+        #print(str(point) + " crossed! " + str(cross_points))
         return True
-    else:
-        print(str(point) + " not crossed!")
+    elif len(cross_points) <= 1:
+        #print(str(point) + " not crossed!")
         return False
+    else: raise RuntimeError("More than 2 cross points with square. WAT.")
 
 
 class State(object):
@@ -122,6 +129,8 @@ class State(object):
         return self.cells[y][x]
 
     def visible(self, p):
+
+        #print("visible " + str(p) + " from " + str(self.botPos()))
         def is_obstacle(x, y):
             (_, c) = self.cell(x, y)
             return c == Cell.OBSTACLE
@@ -135,11 +144,11 @@ class State(object):
 
         # straight line case
         if dx == 0:
-            for y in range(y1 + 1, y2 + 1):
+            for y in range(min(y1, y2) + 1, max(y1, y2) + 1):
                 if is_obstacle(x1, y): return False
             return True
         if dy == 0:
-            for x in range(x1 + 1, x2 + 1):
+            for x in range(min(x1, x2) + 1, max(x1, x2) + 1):
                 if is_obstacle(x, y1): return False
             return True
 
@@ -157,7 +166,7 @@ class State(object):
         y = y1
 
         while x != x2 and y != y2:
-            print("cheking " + str(x) + " " + str(y))
+            #print("cheking " + str(x) + " " + str(y))
             p1 = (x + dx, y)
             if cross_point(p1, line):
                 if is_obstacle(*p1):
@@ -169,7 +178,14 @@ class State(object):
                     if is_obstacle(*p2):
                         return False
                     y = y + dy
-                else: raise Exception("This should never happen")
+                else:
+                    # corner
+                    p3 = (x + dx, y + dy)
+                    if cross_point(p3, line):
+                        if is_obstacle(*p3):
+                            return False
+                    x = x + dx
+                    y = y + dy
         return True
 
 
