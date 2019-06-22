@@ -1,10 +1,10 @@
-from constants import STRICT_VALIDATION, Booster, Direction
+from constants import *
 
 
 class Bot:
     def __init__(self, pos: tuple):
         self.pos = pos
-        self.direction =
+        self.direction = Direction.RIGHT
         self.manipulators = [
             (1, 0),
             (1, 1),
@@ -31,11 +31,13 @@ class Bot:
         self.manipulators.append((x, y))
 
     def turnLeft(self):
+        self.direction = left_of(self.direction)
         def new(pos):
             return -pos[1], pos[0]
         self.manipulators = [new(pos) for pos in self.manipulators]
 
     def turnRight(self):
+        self.direction = right_of(self.direction)
         def new(pos):
             return pos[1], -pos[0]
         self.manipulators = [new(pos) for pos in self.manipulators]

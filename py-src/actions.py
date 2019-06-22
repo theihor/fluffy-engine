@@ -176,3 +176,8 @@ class AttachManipulator(SimpleAction):
 
     def __str__(self):
         return "B({},{})".format(self.x, self.y)
+
+
+
+
+

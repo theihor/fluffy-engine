@@ -93,18 +93,7 @@ def generate(c):
     return cells, size, start_pos
 
 
-def left_of(d):
-    return {Direction.RIGHT: Direction.UP,
-            Direction.UP: Direction.LEFT,
-            Direction.LEFT: Direction.DOWN,
-            Direction.DOWN: Direction.RIGHT}[d]
 
-
-def right_of(d):
-    return {Direction.RIGHT: Direction.DOWN,
-            Direction.DOWN: Direction.LEFT,
-            Direction.LEFT: Direction.UP,
-            Direction.UP: Direction.RIGHT}[d]
 
 
 def cells_to_polygon(cells, width, height):

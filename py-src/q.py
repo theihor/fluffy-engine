@@ -1,3 +1,6 @@
+import pathfinder
+from constants import Direction
+from solver import moveCommand
 from state import *
 from actions import *
 import random
@@ -6,31 +9,83 @@ import encoder
 import copy
 import os
 import pickle
+from filelock import FileLock
+
+
+class GoToClosestRot(SimpleAction):
+    def __init__(self):
+        super().__init__("G")
+
+    def validate(self, state: State, bot):
+        return True
+
+    def process(self, state: State, bot):
+        super().process(state, bot)
+
+
 
 qmap = {}
 
-all_actions = [MoveDown(), MoveUp(), MoveLeft(), MoveRight(), TurnLeft(), TurnRight()]
+all_actions = [MoveDown(), MoveUp(), MoveLeft(), MoveRight(), TurnLeft(), TurnRight(), GoToClosestRot()]
 
 epsilon = 0.005
+alpha = 0.05 # learning rate
+gamma = 0.95  # discount factor
 
 
 def state_key(state):
-    (bx, by) = state.bots[0].pos
+    bot = state.bots[0]
+    (bx, by) = bot.pos
     arr = []
-    ms = [(bx + x, by + y) for (x, y) in state.bots[0].manipulators]
-    for x in range(bx - 2, bx + 3):
-        for y in range(by - 1, by + 3):
-            if (x, y) in ms:
-                continue
-            if 0 <= x < state.width and 0 <= y < state.height:
-                (_, c) = state.cell(x, y)
-                if c == Cell.ROT:
-                    arr.append('r')
-                else:
-                    arr.append('c') # clean
+    ms = [(bx + x, by + y) for (x, y) in bot.manipulators] + [(bx, by)]
+
+    xl = []; yl = []
+    outer_x = True
+    if bot.direction == Direction.RIGHT:
+        xl = list(range(bx - 1, bx + 3))
+        xl.reverse()
+        yl = list(range(by - 2, by + 3))
+        yl.reverse()
+        outer_x = True
+    elif bot.direction == Direction.DOWN:
+        xl = list(range(bx - 2, bx + 3))
+        xl.reverse()
+        yl = list(range(by - 1, by + 3))
+        outer_x = False
+    elif bot.direction == Direction.LEFT:
+        xl = list(range(bx - 1, bx + 3))
+        yl = list(range(by - 2, by + 3))
+        outer_x = True
+    else:
+        xl = list(range(bx - 2, bx + 3))
+        yl = list(range(by - 1, by + 3))
+        yl.reverse()
+        outer_x = False
+
+    def process_p(x, y):
+        if 0 <= x < state.width and 0 <= y < state.height:
+            (_, c) = state.cell(x, y)
+            if c == Cell.ROT:
+                arr.append('r')
             else:
-                arr.append('o')
-    return ''.join(arr)
+                arr.append('c')  # clean
+        else:
+            arr.append('o')
+
+    if outer_x:
+        for x in xl:
+            for y in yl:
+                if not (x, y) in ms: process_p(x, y)
+    else:
+        for y in yl:
+            for x in xl:
+                if not (x, y) in ms: process_p(x, y)
+
+    key = ''.join(arr)
+    if len(xl) * len(yl) != 20:
+        print(str(len(xl)) + " x " + str(len(yl)))
+        print(key)
+    return key
 
 
 def q_action(state):
@@ -54,13 +109,11 @@ def q_action(state):
         return (best, bestv)
 
 
-alpha = 0.05 # learning rate
-gamma = 0.95  # discount factor
 
 
 def learning_run1(state, random_start=False):
     action_list = []
-    max_steps = state.height * state.width
+    max_steps = state.height * state.width * 3
 
     if random_start:
         start_pos = None
@@ -71,12 +124,28 @@ def learning_run1(state, random_start=False):
         start_pos = state.botPos()
     steps = 0
     state.setBotPos(*start_pos)
-    while not state.is_all_clean() and steps < max_steps:
+    path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
+    while path and steps < max_steps:
         (a, v) = q_action(state)
         key = state_key(state) + str(a)
-        action_list.append(a)
-        state.nextAction(a)
-        steps += 1
+        r = 0
+        if isinstance(a, GoToClosestRot):
+            if path:
+                commands = []
+                for (pos, nextPos) in zip(path, path[1:]):
+                    commands.append(moveCommand(pos, nextPos))
+                # print(commands)
+                for c in commands:
+                    action_list.append(c)
+                    state.nextAction(c)
+                    steps += 1
+                    r -= 1
+                    r += state.last_painted
+        else:
+            action_list.append(a)
+            state.nextAction(a)
+            steps += 1
+
         if state.last_painted > 0:
             r = state.last_painted
         else: r = -1
@@ -88,10 +157,12 @@ def learning_run1(state, random_start=False):
         qmap[key] += alpha * (r + gamma * v1 - v)
         #print("q1 = " + str(qmap[key]))
 
+        path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
+
     if random_start: return False
     else: return action_list
 
-iterations = 100
+iterations = 30
 
 state = None
 id = None
@@ -116,6 +187,7 @@ def learn(task_id):
     global qmap
 
     dumped_qmap_name = "../qmaps/main_qmap.pickle"
+
     if os.path.isfile(dumped_qmap_name):
         with open(dumped_qmap_name, "rb") as f:
             qmap = pickle.load(f)
@@ -126,11 +198,11 @@ def learn(task_id):
 
     best_len = len(best_sol)
     for i in range(iterations):
-        random_start = random.random() > 0.1
+        random_start = False
         sol = learning_run1(get_state(task_id), random_start=random_start)
         if i % 10 == 0:
             print(str(i) + ": " + str(best_len))
-        if not random_start and best_len > len(sol):
+        if not random_start and best_len >= len(sol):
             best_sol = sol
             best_len = len(sol)
     #print(qmap)
@@ -143,8 +215,12 @@ def learn(task_id):
     #             raise RuntimeError("BAD DUMP")
     return best_sol
 
-for i in range(10):
-    al = learn("prob-002")
-    print("res at i = " + str(i) + ": " + str(len(al)))
-    encoder.Encoder.encodeToFile("../test.sol", [al])
+for i in range(1, 301):
+    task_id = "prob-"
+    if i < 10: task_id += "00" + str(i)
+    elif i < 100: task_id += "0" + str(i)
+    else: task_id += str(i)
+    al = learn(task_id)
+    print("res for " + str(task_id) + ": " + str(len(al)))
+    encoder.Encoder.encodeToFile("../q-sol/" + task_id + "-" + str(len(al)) + ".sol", [al])
 

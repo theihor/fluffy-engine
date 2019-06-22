@@ -211,10 +211,8 @@ class State(object):
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
             if cell[1] == Cell.ROT and self.visible((x, y)):
-                (_, prev_state) = self.cells[y][x]
-                if prev_state == Cell.ROT:
-                    self.last_painted += 1
-                    self.total_rot_cells -= 1
+                self.last_painted += 1
+                self.total_rot_cells -= 1
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
 
     def tryPaintCellWith(self, bx, by, x, y, func):
@@ -253,6 +251,9 @@ class State(object):
     def show(self):
         print_cells(self.cells, self.width, self.height)
 
+    def is_all_clean(self):
+        return self.total_rot_cells <= 0
+
 def print_cells(cells, w, h):
     for y in reversed(range(h)):
         for x in range(w):
@@ -265,5 +266,3 @@ def print_cells(cells, w, h):
             print(ch, end='')
         print()
 
-    def is_all_clean(self):
-        return self.total_rot_cells <= 0
