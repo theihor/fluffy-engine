@@ -61,7 +61,7 @@ def collectBoosters(st):
             turns -= 1
             st.bot.turnRight()
             pos = (pos[1], -pos[0])
-        st.nextAction(AttachManipulator(*pos))
+        st.nextAction(AttachManipulator(pos))
 
 
 def closestRotSolver(st):
