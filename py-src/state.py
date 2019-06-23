@@ -4,6 +4,7 @@ from math import ceil, floor
 from collections import namedtuple
 import heapq
 
+from encoder import Encoder
 
 VEdge = namedtuple("VEdge", ('x', 'y1', 'y2'))
 
@@ -233,6 +234,7 @@ class State(object):
                 bot.process(self)
                 bot.tickTime()
             else:
+                Encoder.encodeToFile("../fail.sol", [bot.actions])
                 raise RuntimeError("Invalid command {} at {} step"
                                    .format(action, len(bot.actions)))
         self.repaint()

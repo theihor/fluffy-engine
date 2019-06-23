@@ -1,5 +1,5 @@
 import pathfinder
-from constants import Direction
+from constants import Direction, ATTACHER
 from solver import moveCommand
 from actions import *
 import random
@@ -25,7 +25,22 @@ class GoToClosestRot(SimpleAction):
 
 qmap = {}
 
-all_actions = [MoveDown(), MoveUp(), MoveLeft(), MoveRight(), TurnLeft(), TurnRight(), GoToClosestRot()]
+
+constant_actions = [MoveDown(),
+            MoveUp(),
+            MoveLeft(),
+            MoveRight(),
+            TurnLeft(),
+            TurnRight(),
+            GoToClosestRot(),
+            AttachDrill(),
+            AttachWheels()
+            ]
+
+
+def all_actions(bot):
+    return constant_actions + [AttachManipulator(ATTACHER.get_position(bot))]
+
 
 epsilon = 0.001
 alpha = 0.01 # learning rate
@@ -88,7 +103,8 @@ def state_key(state):
 
 
 def q_action(state):
-    valid_actions = [a for a in all_actions if a.validate(state, state.bots[0])]
+    bot = state.bots[0]
+    valid_actions = [a for a in all_actions(bot) if a.validate(state, bot)]
     def value(a):
         key = state_key(state) + str(a)
         if not key in qmap:
@@ -112,7 +128,7 @@ def q_action(state):
 
 def learning_run1(state, random_start=False):
     action_list = []
-    max_steps = state.height * state.width * 3
+    max_steps = state.height * state.width * 2
 
     if random_start:
         start_pos = None
@@ -121,7 +137,9 @@ def learning_run1(state, random_start=False):
                          random.randint(0, state.height - 1))
     else:
         start_pos = state.botPos()
+
     steps = 0
+    steps_from_last_positive_r = 0
     state.setBotPos(*start_pos)
     path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
     while path and steps < max_steps:
@@ -135,11 +153,16 @@ def learning_run1(state, random_start=False):
                     commands.append(moveCommand(pos, nextPos))
                 # print(commands)
                 for c in commands:
-                    action_list.append(c)
-                    state.nextAction(c)
-                    steps += 1
-                    r -= 1
-                    r += state.last_painted
+                    if c.validate(state, state.bots[0]):
+                        action_list.append(c)
+                        state.nextAction(c)
+                        steps += 1
+                        r -= 1
+                        r += state.last_painted
+                        if state.last_painted > 0:
+                            steps_from_last_positive_r = 0
+                        else:
+                            steps_from_last_positive_r += 1
         else:
             action_list.append(a)
             state.nextAction(a)
@@ -147,7 +170,10 @@ def learning_run1(state, random_start=False):
 
         if state.last_painted > 0:
             r = state.last_painted
-        else: r = -1
+            steps_from_last_positive_r = 0
+        else:
+            steps_from_last_positive_r += 1
+            r = -1 - (steps_from_last_positive_r / 1e5)
 
         # update Q
 
@@ -162,7 +188,7 @@ def learning_run1(state, random_start=False):
     else: return action_list
 
 
-iterations = 100
+iterations = 10
 
 state = None
 id = None
@@ -201,15 +227,16 @@ def learn(task_id):
     for i in range(iterations):
         random_start = False
         sol = learning_run1(get_state(task_id), random_start=random_start)
-        if i % 10 == 0:
-            print(str(i) + ": " + str(best_len))
+        if i % 2 == 0:
+            print(str(task_id)+ " " + str(i) + ": " + str(best_len))
         if not random_start and best_len >= len(sol):
             best_sol = sol
             best_len = len(sol)
-    #print(qmap)
     with FileLock("../qmaps/.lock"):
         with open(dumped_qmap_name, "wb") as f:
             pickle.dump(qmap, f)
+
+    #print(qmap)
     # with open(dumped_qmap_name, "rb") as f:
     #     qmap1 = pickle.load(f)
     #     for key in qmap:
@@ -264,6 +291,10 @@ def run_qbot(state, qmap_fname):
             steps += 1
 
         path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
+
+    if steps > max_steps:
+        raise RuntimeError("Failed with maxsteps, probably deadlocked")
+
     return [action_list]
 
 
