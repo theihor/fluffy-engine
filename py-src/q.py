@@ -103,11 +103,20 @@ def state_key(state):
     return key
 
 
+def get_key(state, action):
+    if isinstance(action, AttachDrill) or\
+            isinstance(action, AttachManipulator) or \
+            isinstance(action, AttachWheels):
+        return str(action)
+    else:
+        return state_key(state) + str(action)
+
+
 def q_action(state):
     bot = state.bots[0]
     valid_actions = [a for a in all_actions(bot) if a.validate(state, bot)]
     def value(a):
-        key = state_key(state) + str(a)
+        key = get_key(state, a)
         if not key in qmap:
             qmap[key] = random.random() * 1e-5
         return qmap[key]
@@ -149,7 +158,7 @@ def learning_run1(state, random_start=False):
     path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
     while path and steps < max_steps:
         (a, v) = q_action(state)
-        key = state_key(state) + str(a)
+        key = get_key(state, a)
         r = 0
         if isinstance(a, GoToClosestRot):
             if path:
