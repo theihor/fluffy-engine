@@ -28,10 +28,10 @@ qmap = {}
 
 
 constant_actions = [
-    MoveDown(),
-    MoveUp(),
-    MoveLeft(),
-    MoveRight(),
+    MoveDown(),  # meaning BACKWARD
+    MoveUp(),    # meaning FORWARD
+    MoveLeft(),  # relative to face
+    MoveRight(), # relative to face
     TurnLeft(),
     TurnRight(),
     GoToClosestRot(),
@@ -59,6 +59,7 @@ gamma = 0.95  # discount factor
 
 
 def state_key(state):
+    """bot sees cells relative to itself"""
     bot = state.bots[0]
     (bx, by) = bot.pos
     arr = []
@@ -113,7 +114,8 @@ def state_key(state):
     return key
 
 
-def get_key(state, action):
+def get_key(state, bot, action):
+    action = translate_move(bot, action)
     if isinstance(action, AttachDrill) or\
             isinstance(action, AttachManipulator) or \
             isinstance(action, AttachWheels):
@@ -122,11 +124,10 @@ def get_key(state, action):
         return state_key(state) + str(action)
 
 
-def q_action(state):
-    bot = state.bots[0]
-    valid_actions = [a for a in all_actions(bot) if a.validate(state, bot)]
+def q_action(state, bot):
+    valid_actions = [a for a in all_actions(bot) if translate_move(bot, a).validate(state, bot)]
     def value(a):
-        key = get_key(state, a)
+        key = get_key(state, bot, a)
         if not key in qmap:
             qmap[key] = random.random() * 1e-5
         return qmap[key]
@@ -144,12 +145,45 @@ def q_action(state):
         return (best, bestv)
 
 
+def translate_move(bot, action):
+    """model chooses moves relative to bots face, this is translation to absolute move"""
+    a = str(action)
+    if a != "W" and a != "S" and a != "D" and a != "A":
+        return action
+
+    if bot.direction == Direction.RIGHT:
+        return {"W": MoveRight(),
+         "S": MoveLeft(),
+         "D": MoveDown(),
+         "A": MoveUp()}[a]
+    elif bot.direction == Direction.UP:
+        return {"W": MoveUp(),
+                "S": MoveDown(),
+                "D": MoveRight(),
+                "A": MoveLeft()}[a]
+    elif bot.direction == Direction.LEFT:
+        return {"W": MoveLeft(),
+                "S": MoveRight(),
+                "D": MoveUp(),
+                "A": MoveDown()}[a]
+    elif bot.direction == Direction.DOWN:
+        return {"W": MoveDown(),
+                "S": MoveUp(),
+                "D": MoveRight(),
+                "A": MoveLeft()}[a]
+    else: raise RuntimeError("Error in move translation")
 
 
 def learning_run1(state, random_start=False):
 
     bot = state.bots[0]
     action_list = []
+    def add_action(a, translate=True):
+        a1 = a
+        if translate:
+            a1 = translate_move(bot, a)
+        action_list.append(a1)
+        return a1
     max_steps = state.height * state.width * 2
 
     # collect boosters
@@ -163,7 +197,7 @@ def learning_run1(state, random_start=False):
         if path is None: break
 
         for (pos, nextPos) in zip(path, path[1:]):
-            action_list.append(moveCommand(pos, nextPos))
+            add_action(moveCommand(pos, nextPos), translate=False)
         bc -= 1
 
     # if random_start:
@@ -181,8 +215,8 @@ def learning_run1(state, random_start=False):
 
     path = pathfinder.bfsFind(state, bot.pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
     while path and steps < max_steps:
-        (a, v) = q_action(state)
-        key = get_key(state, a)
+        (a, v) = q_action(state, bot)
+        key = get_key(state, bot, a)
         r = 0
         if isinstance(a, GoToClosestRot):
             if path:
@@ -193,7 +227,7 @@ def learning_run1(state, random_start=False):
                 #print([str(c) for c in commands])
                 for c in commands:
                     if c.validate(state, state.bots[0]):
-                        action_list.append(c)
+                        add_action(c, translate=False)
                         state.nextAction(c)
                         steps += 1
                         r -= 1
@@ -203,8 +237,8 @@ def learning_run1(state, random_start=False):
                         else:
                             steps_from_last_positive_r += 1
         else:
-            action_list.append(a)
-            state.nextAction(a)
+            a1 = add_action(a, translate=True)
+            state.nextAction(a1)
             steps += 1
 
         if state.last_painted > 0:
@@ -216,7 +250,7 @@ def learning_run1(state, random_start=False):
 
         # update Q
 
-        (_, v1) = q_action(state)
+        (_, v1) = q_action(state, bot)
         #print("r = " + str(r) + ", q = " + str(qmap[key]), end=" ")
         qmap[key] += alpha * (r + gamma * v1 - v)
         #print("q1 = " + str(qmap[key]))
