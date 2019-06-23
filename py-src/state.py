@@ -255,7 +255,7 @@ class State(object):
                 #                            [str(x) for x in actions],
                 #                            [str(x) for x in bot.actions]))
                 pass
-            self.tickNum += 1
+        self.tickNum += 1
         self.repaint()
 
     def nextAction(self, action):
