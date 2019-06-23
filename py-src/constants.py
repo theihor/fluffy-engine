@@ -6,6 +6,7 @@ DRILL_DURATION = 30
 WHEELS_DURATION = 50
 STRICT_VALIDATION = False
 ATTACHER = SimpleAttacher()
+TURN_BOT = False
 
 
 class Cell(Enum):
