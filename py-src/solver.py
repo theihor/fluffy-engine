@@ -59,17 +59,40 @@ def selectCommand(state, command, bot_num):
     return command
 
 
+# def pathToCommands(path, state, bot_num=0):
+#     commands = []
+#     for (pos, nextPos) in zip(path, path[1:]):
+#         commands.append(moveCommand(pos, nextPos))
+#     for command in commands:
+#         if TURN_BOT:
+#             new = selectCommand(state, command, bot_num)
+#             if new != command:
+#                 state.nextAction(new)
+#         state.nextAction(command)
+
+
 def pathToCommands(path, state, bot_num=0):
-    commands = []
+    original_path_sells_state = {}
+    last_pos = path[-1]
     for (pos, nextPos) in zip(path, path[1:]):
-        commands.append(moveCommand(pos, nextPos))
-    for command in commands:
+        original_path_sells_state.update({nextPos: state.cells[nextPos[1]][nextPos[0]][1]})
+    for (pos, nextPos) in zip(path, path[1:]):
+        # if during bot movement target pos is already wrapped by his manipulators
+        # then we need to stop moving towards that point and select another
+
+        # check for last position
+        if original_path_sells_state[last_pos] != state.cells[last_pos[1]][last_pos[0]][1]:
+            break;
+        # check for next position
+        if original_path_sells_state[nextPos] != state.cells[nextPos[1]][nextPos[0]][1]:
+            break
+
+        command = moveCommand(pos, nextPos)
         if TURN_BOT:
             new = selectCommand(state, command, bot_num)
             if new != command:
                 state.nextAction(new)
         state.nextAction(command)
-
 
 def collectBoosters(st, bot):
     while True:
