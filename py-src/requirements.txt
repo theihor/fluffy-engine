@@ -1,1 +1,3 @@
 parsec
+svgwrite
+tsp_solver2

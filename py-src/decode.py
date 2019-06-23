@@ -14,10 +14,12 @@ booster_code_dict = {
     "B": Booster.MANIPULATOR,
     "F": Booster.WHEEL,
     "L": Booster.DRILL,
-    "X": Booster.MYSTERIOUS
+    "X": Booster.MYSTERIOUS,
+    "R": Booster.TELEPORT,
+    "C": Booster.CLONE
 }
 
-booster_code = one_of("BFLX").parsecmap(lambda c: booster_code_dict[c])
+booster_code = one_of("BFLXRC").parsecmap(lambda c: booster_code_dict[c])
 booster_location = booster_code.bind(lambda x: point.parsecmap(lambda p: (x, p)))
 
 obstacles = sepBy(a_map, string(";"))
