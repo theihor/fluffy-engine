@@ -1,6 +1,6 @@
 import pathfinder
 from constants import Direction, ATTACHER
-from solver import moveCommand
+from solver import moveCommand, collectBoosters
 from actions import *
 import random
 import decode
@@ -26,16 +26,17 @@ class GoToClosestRot(SimpleAction):
 qmap = {}
 
 
-constant_actions = [MoveDown(),
-            MoveUp(),
-            MoveLeft(),
-            MoveRight(),
-            TurnLeft(),
-            TurnRight(),
-            GoToClosestRot(),
-            AttachDrill(),
-            AttachWheels()
-            ]
+constant_actions = [
+    MoveDown(),
+    MoveUp(),
+    MoveLeft(),
+    MoveRight(),
+    TurnLeft(),
+    TurnRight(),
+    GoToClosestRot(),
+    AttachDrill(),
+    AttachWheels()
+]
 
 
 def all_actions(bot):
@@ -127,20 +128,24 @@ def q_action(state):
 
 
 def learning_run1(state, random_start=False):
-    action_list = []
+
+    collectBoosters(state, state.bots[0])
+    action_list = state.bots[0].actions
+
     max_steps = state.height * state.width * 2
 
     if random_start:
-        start_pos = None
-        while not start_pos or not state.cell(*start_pos)[1] == Cell.CLEAN:
-            start_pos = (random.randint(0, state.width -1),
-                         random.randint(0, state.height - 1))
+        # start_pos = None
+        # while not start_pos or not state.cell(*start_pos)[1] == Cell.CLEAN:
+        #     start_pos = (random.randint(0, state.width -1),
+        #                  random.randint(0, state.height - 1))
+        pass
     else:
-        start_pos = state.botPos()
+        start_pos = state.bots[0].pos
 
     steps = 0
     steps_from_last_positive_r = 0
-    state.setBotPos(*start_pos)
+    #state.setBotPos(*start_pos)
     path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
     while path and steps < max_steps:
         (a, v) = q_action(state)

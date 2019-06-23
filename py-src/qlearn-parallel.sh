@@ -4,12 +4,12 @@
 #./venv/bin/python q.py 281 290 &
 #./venv/bin/python q.py 291 300 &
 #./venv/bin/python q.py 295 300 
-./venv/bin/python q.py 1 20 &
-./venv/bin/python q.py 21 35 &
-./venv/bin/python q.py 36 50 &
-./venv/bin/python q.py 51 63 &
-./venv/bin/python q.py 64 80 &
-./venv/bin/python q.py 81 95 
+./venv/bin/python q.py 100 105 &
+./venv/bin/python q.py 106 110 &
+./venv/bin/python q.py 201 205 &
+./venv/bin/python q.py 295 300 &
+./venv/bin/python q.py 250 255 &
+./venv/bin/python q.py 281 284 
 
 wait
 echo "All tasks complete!"

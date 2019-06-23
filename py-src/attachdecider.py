@@ -7,8 +7,10 @@ class SimpleAttacher:
             turns += 1
             bot.turnLeft()
         idx = 2
-        while not bot.is_attachable(1, idx * self.LR):
+        t = 0
+        while not bot.is_attachable(1, idx * self.LR) and t < 100:
             idx += 1
+            t += 1
         pos = (1, idx * self.LR)
 
         self.LR *= -1
