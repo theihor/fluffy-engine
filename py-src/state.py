@@ -71,13 +71,16 @@ class State(object):
             Booster.DRILL: 0,
             Booster.WHEEL: 0,
             Booster.MANIPULATOR: 0,
-            Booster.MYSTERIOUS: 0
+            Booster.MYSTERIOUS: 0,
+            Booster.TELEPORT: 0,
+            Booster.CLONE: 0,
         }
         self.createCells(contour)
         for obstacle in obstacles:
             if len(obstacle) > 0:
                 self.fillContour(obstacle, (None, Cell.OBSTACLE))
         self.addBoosters(boosters)
+        self.tickNum = 0
         self.repaint()
 
     def addBoosters(self, boosters):
@@ -136,12 +139,15 @@ class State(object):
         return self.cells[y][x]
 
     def visible(self, p):
+        (x1, y1) = self.botPos()
+        return self.visibleFrom(x1, y1, p)
+
+    def visibleFrom(self, x1, y1, p):
 
         #print("visible " + str(p) + " from " + str(self.botPos()))
         def is_obstacle(x, y):
             (_, c) = self.cell(x, y)
             return c == Cell.OBSTACLE
-        (x1, y1) = self.botPos()
         (x2, y2) = p
         dx = x2 - x1
         dy = y2 - y1
@@ -172,7 +178,7 @@ class State(object):
         x = x1
         y = y1
 
-        while x != x2 and y != y2:
+        while x != x2 or y != y2:
             #print("cheking " + str(x) + " " + str(y))
             p1 = (x + dx, y)
             if cross_point(p1, line):
@@ -198,13 +204,13 @@ class State(object):
     def paintCell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
-            if cell[1] != Cell.OBSTACLE and self.visible((x, y)):
+            if cell[1] == Cell.ROT and self.visible((x, y)):
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
 
-    def tryPaintCellWith(self, x, y, func):
+    def tryPaintCellWith(self, bx, by, x, y, func):
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
-            if (cell[1] == Cell.ROT and self.visible((x, y))):
+            if (cell[1] == Cell.ROT and self.visibleFrom(bx, by, (x, y))):
                 func(x, y)
 
     def nextActions(self, actions):
@@ -214,6 +220,10 @@ class State(object):
                 action.process(self, bot)
                 bot.process(self)
                 bot.tickTime()
+            else:
+                raise RuntimeError("Invalid command {} at {} step"
+                                   .format(action, len(bot.actions)))
+            self.tickNum += 1
         self.repaint()
 
     def nextAction(self, action):
@@ -225,6 +235,7 @@ class State(object):
     def repaint(self):
         for bot in self.bots:
             bot.repaint(self)
+            self.cells[bot.pos[1]][bot.pos[0]] = (None, Cell.CLEAN)
 
     def removeBooster(self, pos: tuple):
         self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)

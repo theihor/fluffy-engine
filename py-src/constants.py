@@ -1,8 +1,6 @@
 from enum import Enum, auto
 
-DRILL_DURATION = 30
-WHEELS_DURATION = 50
-STRICT_VALIDATION = False
+from attachdecider import *
 
 
 class Cell(Enum):
@@ -16,6 +14,8 @@ class Booster(Enum):
     DRILL = auto()
     MANIPULATOR = auto()
     MYSTERIOUS = auto()
+    TELEPORT = auto()
+    CLONE = auto()
 
 
 class Direction(Enum):
@@ -23,3 +23,25 @@ class Direction(Enum):
     DOWN = auto()
     LEFT = auto()
     RIGHT = auto()
+
+
+DRILL_DURATION = 30
+WHEELS_DURATION = 50
+STRICT_VALIDATION = False
+ATTACHER = SimpleAttacher()
+TURN_BOT = False
+# 0 - always use, 1 - never use
+WHEELS_PROC = 1
+DRILL_PROC = 1
+# collect stage
+COLLECTABLE = [
+    # Booster.WHEEL,
+    Booster.MANIPULATOR,
+    # Booster.DRILL,
+]
+# paint stage
+USABLE = [
+    # Booster.WHEEL,
+    # Booster.MANIPULATOR,
+    # Booster.DRILL,
+]

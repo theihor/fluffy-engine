@@ -6,6 +6,14 @@ from state import *
 
 class ActionTest(unittest.TestCase):
     state = State.decode(parse_task("../examples/example-01.desc"))
+    state2 = State.decode(parse_task("../examples/vis.desc"))
+
+    def testStrange(self):
+        self.state2.setBotPos(5, 0)
+
+        self.assertFalse(self.state2.visible((6, 4)))
+        self.assertFalse(self.state2.visible((7, 4)))
+        self.assertTrue(self.state2.visible((7, 3)))
 
     def testAdjacent(self):
         self.state.setBotPos(3, 2)
