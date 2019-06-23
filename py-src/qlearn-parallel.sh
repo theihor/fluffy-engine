@@ -1,15 +1,9 @@
-#./venv/bin/python q.py 250 260 &
-#./venv/bin/python q.py 261 270 &
-#./venv/bin/python q.py 271 280 &
-#./venv/bin/python q.py 281 290 &
-#./venv/bin/python q.py 291 300 &
-#./venv/bin/python q.py 295 300 
-./venv/bin/python q.py 100 105 &
-./venv/bin/python q.py 106 110 &
-./venv/bin/python q.py 201 205 &
-./venv/bin/python q.py 295 300 &
-./venv/bin/python q.py 250 255 &
-./venv/bin/python q.py 281 284 
+./venv/bin/python q.py 1 130 ../qmaps/fresh.pickle &
+./venv/bin/python q.py 131 180 ../qmaps/fresh.pickle &
+./venv/bin/python q.py 200 270 ../qmaps/fresh.pickle &
+./venv/bin/python q.py 271 300 ../qmaps/fresh.pickle &
+./venv/bin/python q.py 1 200 ../qmaps/qmap5.pickle &
+./venv/bin/python q.py 201 300 ../qmaps/qmap6.pickle &
 
 wait
 echo "All tasks complete!"

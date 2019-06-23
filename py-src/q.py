@@ -271,7 +271,7 @@ def learning_run1(state, random_start=False):
     else: return action_list
 
 
-iterations = 20
+iterations = 10
 
 task_init_state = None
 saved_task_id = None
@@ -308,8 +308,8 @@ def learn(task_id, qmap_fname):
     for i in range(iterations):
         random_start = False
         sol = learning_run1(get_state(task_id), random_start=random_start)
-        if i % 3 == 0:
-            print(str(task_id)+ " " + str(i) + ": " + str(best_len))
+        #if i % 3 == 0:
+        print(str(task_id)+ " " + str(i) + ": " + str(best_len))
         if not random_start and best_len >= len(sol):
             best_sol = sol
             best_len = len(sol)
