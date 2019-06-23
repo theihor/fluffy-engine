@@ -221,8 +221,11 @@ class State(object):
                 bot.process(self)
                 bot.tickTime()
             else:
-                raise RuntimeError("Invalid command {} at {} step"
-                                   .format(action, len(bot.actions)))
+                # raise RuntimeError("Invalid command {} at {} step ({}) ({})"
+                #                    .format(action, len(bot.actions),
+                #                            [str(x) for x in actions],
+                #                            [str(x) for x in bot.actions]))
+                pass
             self.tickNum += 1
         self.repaint()
 
@@ -235,10 +238,12 @@ class State(object):
     def repaint(self):
         for bot in self.bots:
             bot.repaint(self)
-            self.cells[bot.pos[1]][bot.pos[0]] = (None, Cell.CLEAN)
+            if self.cell(*bot.pos)[0] != Booster.MYSTERIOUS:
+                self.cells[bot.pos[1]][bot.pos[0]] = (None, Cell.CLEAN)
 
     def removeBooster(self, pos: tuple):
-        self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
+        if self.cell(*pos)[0] != Booster.MYSTERIOUS:
+            self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
 
     def show(self):
         for y in reversed(range(self.height)):

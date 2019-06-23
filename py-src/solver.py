@@ -71,26 +71,26 @@ def pathToCommands(path, state, bot_num=0):
         state.nextAction(command)
 
 
-def collectBoosters(st, bot):
+def collectBoosters(st, bot_num):
+    bot = st.bots[bot_num]
     while True:
         path = pathfinder.bfsFind(st, bot.pos,
                                   boosterP(st),
                                   availP=drillableP(st, bot))
         if path is None:
             break
-        pathToCommands(path, st)
+        pathToCommands(path, st, bot_num)
 
         if st.boosters[Booster.MANIPULATOR] > 0:
             command = AttachManipulator(ATTACHER.get_position(bot))
-        # TODO (all boosters)
         else:
             continue
         st.nextAction(command)
 
 
-def closestRotSolver(st):
-    bot = st.bots[0]
-    collectBoosters(st, bot)
+def closestRotSolver(st, bot_num=0):
+    bot = st.bots[bot_num]
+    collectBoosters(st, bot_num)
     while True:
         path = pathfinder.bfsFind(st, bot.pos,
                                   wrapP(st),

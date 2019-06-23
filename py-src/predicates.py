@@ -12,6 +12,10 @@ def wrapP(st):
                            or st.cell(x, y)[0] in USABLE
 
 
+def spawnP(st):
+    return lambda l, x, y: st.cell(x, y)[0] == Booster.MYSTERIOUS
+
+
 # is the cell available for bot_num
 def drillableP(st, bot=None):
     if bot is None:
