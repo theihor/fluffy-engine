@@ -15,12 +15,12 @@ from optimizer import optimize, optimize_small_clean, optimize_long_moves, optim
 
 def solve(taskFile, solutionFile, solver):
     st = State.decode(decode.parse_task(taskFile))
-    init_st = copy.deepcopy(st)
+    # init_st = copy.deepcopy(st)
     new_state = solver(st)
-    for it in range(1):
-        new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_small_clean)
-        new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_long_moves)
-        new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_teleports)
+    # for it in range(1):
+    #     new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_small_clean)
+    #     new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_long_moves)
+    #     new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_teleports)
     Encoder.encodeToFile(solutionFile, new_state)
 
 

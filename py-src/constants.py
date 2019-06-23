@@ -36,7 +36,7 @@ DRILL_PROC = 1
 COLLECTABLE = [
     # Booster.WHEEL,
     Booster.MANIPULATOR,
-    Booster.TELEPORT,
+    # Booster.TELEPORT,
     # Booster.DRILL,
 ]
 # paint stage
