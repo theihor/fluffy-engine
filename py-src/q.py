@@ -36,7 +36,7 @@ constant_actions = [
     TurnRight(),
     GoToClosestRot(),
     AttachDrill(),
-    #AttachWheels()
+    AttachWheels()
 ]
 
 
