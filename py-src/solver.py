@@ -329,15 +329,17 @@ def make_region_neighbours_map(ids_yx):
     return id_to_neighbours_map
 
             
-def make_traversal_plan(region_ids_yx):
+def make_traversal_plan(region_ids_yx, initial_id):
     id_to_neighbours_map = make_region_neighbours_map(region_ids_yx)
     max_id = 0
     for row in region_ids_yx:
         for _id in row:
             if _id > max_id:
                 max_id = _id
+    
     # TODO: try using this library instead:
     #       https://github.com/jvkersch/pyconcorde
+    unreachable = 1000
     distance_half_matrix = []
     for a in range(1, max_id+1):
         row = []
@@ -345,10 +347,21 @@ def make_traversal_plan(region_ids_yx):
             if b in id_to_neighbours_map[a]:
                 row.append(1)
             else:
-                row.append(1000*1000*1000)
+                row.append(unreachable)
+        
         distance_half_matrix.append(row)
+    last_row = [unreachable] * (max_id)
+    
+    distance_half_matrix.append(last_row)
 
-    path = tsp.solve_tsp(distance_half_matrix, optim_steps=10)
+    true_initial_id = initial_id - 1
+
+    path = tsp.solve_tsp(
+        distance_half_matrix,
+        optim_steps=10,
+        endpoints=(initial_id - 1, max_id)
+    )
+    path.pop()
     
     return list(map(lambda x: x+1, path))
 
@@ -401,12 +414,63 @@ def draw_regions(st, ids_yx, traversal_plan, svg_file):
 
 def draw_regions_for_task(task_file, svg_file):
     st = State.decode(decode.parse_task(task_file))
+    bot_pos = st.botPos()
     ids_yx = split_into_regions(st)
-    traversal_plan = make_traversal_plan(ids_yx)
+    initial_id = ids_yx[bot_pos[1]][bot_pos[0]]
+    traversal_plan = make_traversal_plan(ids_yx, initial_id)
     draw_regions(st, ids_yx, traversal_plan, svg_file)
 
+def ids_yx_to_blobs_map(ids_yx):
+    h = len(ids_yx)
+    w = len(ids_yx[0])
+    id_to_blob = {}
+    for y in range(h):
+        for x in range(w):
+            _id = ids_yx[y][x]
+            if _id != 0:
+                if not _id in id_to_blob:
+                    id_to_blob[_id] = set()
+                id_to_blob[_id].add((x,y))
+    return id_to_blob
 
+
+def move_to_blob(st, blob):
+    path = pathfinder.bfsFindClosest(
+        st,
+        st.botPos(),
+        lambda l, x, y: (x,y) in blob
+    )
+    assert path
+    pathToCommands(path, st)
+    return path[len(path) - 1]
+
+
+def solve_with_regions(st):
+    bot = st.bots[0]
+    collectBoosters(st, bot)
+    curPos = st.botPos()
+    
+    ids_yx = split_into_regions(st)
+    id_to_blob = ids_yx_to_blobs_map(ids_yx)
+    initial_id = ids_yx[curPos[1]][curPos[0]]
+    assert initial_id != 0
+    plan = make_traversal_plan(ids_yx, initial_id)
+    
+    for blob_id in plan:
+        blob = id_to_blob[blob_id]
+        assert blob
+        curPos = move_to_blob(st, blob)
+        while True:
+            nextPos = closestRotInBlob(st, blob, {})
+            if nextPos is None:
+                break
+    return st.actions()
+
+    
 # draw_regions_for_task(
-#     "/home/eddy/prog/fluffy-engine/desc/prob-120.desc",
+#     "/home/eddy/prog/fluffy-engine/desc/prob-150.desc",
 #     "/home/eddy/tmp/1.svg")
 
+# solve('/home/eddy/prog/fluffy-engine/desc/prob-150.desc',
+#       '/home/eddy/tmp/1.sol',
+#       solve_with_regions)
