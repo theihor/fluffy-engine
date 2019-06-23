@@ -80,6 +80,7 @@ class State(object):
             if len(obstacle) > 0:
                 self.fillContour(obstacle, (None, Cell.OBSTACLE))
         self.addBoosters(boosters)
+        self.tickNum = 0
         self.repaint()
 
     def addBoosters(self, boosters):
@@ -222,6 +223,7 @@ class State(object):
             else:
                 raise RuntimeError("Invalid command {} at {} step"
                                    .format(action, len(bot.actions)))
+            self.tickNum += 1
         self.repaint()
 
     def nextAction(self, action):

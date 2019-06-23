@@ -10,10 +10,11 @@ import svg_colors
 import tsp_solver.greedy as tsp
 from predicates import *
 
+
 def solve(taskFile, solutionFile, solver):
     st = State.decode(decode.parse_task(taskFile))
-    commands = solver(st)
-    Encoder.encodeToFile(solutionFile, commands)
+    new_state = solver(st)
+    Encoder.encodeToFile(solutionFile, new_state)
 
 
 def moveCommand(posFrom, posTo):
@@ -113,7 +114,7 @@ def closestRotSolver(st):
             if random.random() > DRILL_PROC:
                 # print("Attach DRILL at " + str(len(bot.actions)))
                 st.nextAction(AttachDrill())
-    return st.actions()
+    return st
 
 
 def numCleaned(st, pos, botnum):
