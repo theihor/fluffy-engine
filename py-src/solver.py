@@ -8,6 +8,7 @@ import pathfinder
 import svgwrite
 import svg_colors
 import tsp_solver.greedy as tsp
+from predicates import *
 
 def solve(taskFile, solutionFile, solver):
     st = State.decode(decode.parse_task(taskFile))
@@ -70,15 +71,10 @@ def pathToCommands(path, state, bot_num=0):
 
 
 def collectBoosters(st, bot):
-    interesting = [
-        Booster.WHEEL,
-        Booster.MANIPULATOR,
-        Booster.DRILL,
-    ]
     while True:
         path = pathfinder.bfsFind(st, bot.pos,
-                                  lambda l, x, y: st.cell(x, y)[0] in interesting,
-                                  availP=available(st, bot))
+                                  boosterP(st),
+                                  availP=drillableP(st, bot))
         if path is None:
             break
         pathToCommands(path, st)
@@ -91,30 +87,17 @@ def collectBoosters(st, bot):
         st.nextAction(command)
 
 
-def available(state, bot=None):
-    if bot is None:
-        bot = state.bots[0]
-    drill = bot.drill_duration
-    wheel = bot.wheel_duration
-
-    def drill_aval(l):
-        # TODO (wheel handling)
-        return drill > l
-
-    return lambda l, x, y: drill_aval(l) or state.cell(x, y)[1] is not Cell.OBSTACLE
-
-
 def closestRotSolver(st):
     bot = st.bots[0]
     collectBoosters(st, bot)
     while True:
         path = pathfinder.bfsFind(st, bot.pos,
-                                  lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
-                                  availP=available(st))
+                                  wrapP(st),
+                                  availP=drillableP(st))
         if st.boosters[Booster.DRILL] > 0 and bot.drill_duration <= 0:
             path2 = pathfinder.bfsFind(st, bot.pos,
-                                       lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
-                                       availP=lambda l, x, y: DRILL_DURATION > l or st.cell(x, y)[1] is not Cell.OBSTACLE)
+                                       wrapP(st),
+                                       availP=withDrillP(st))
             if len(path2) < len(path):
                 st.nextAction(AttachDrill())
                 path = path2
@@ -147,14 +130,13 @@ def numCleaned(st, pos, botnum):
 def closestRotInBlob(st, blob=None, blobRanks=None):
     if blob is None:
         path = pathfinder.bfsFindClosest(st, st.botPos(),
-                                         lambda l, x, y:
-                                         st.cell(x, y)[1] == Cell.ROT,
+                                         wrapP(st),
                                          rank=lambda x, y:
                                          -numCleaned(st, (x, y), 0))
     else:
         path = pathfinder.bfsFindClosest(
             st, st.botPos(),
-            lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
+            wrapP(st),
             availP=lambda x, y: (x, y) in blob,
             rank=lambda x, y:
             (blobRanks.get((x, y)) or 99999,
