@@ -19,3 +19,5 @@ class Booster(Enum):
     DRILL = auto()
     MANIPULATOR = auto()
     MYSTERIOUS = auto()
+    TELEPORT = auto()
+    CLONE = auto()
