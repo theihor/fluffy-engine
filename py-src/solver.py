@@ -7,6 +7,7 @@ import svgwrite
 import svg_colors
 import tsp_solver.greedy as tsp
 
+
 def solve(taskFile, solutionFile, solver):
     st = State.decode(decode.parse_task(taskFile))
     commands = solver(st)

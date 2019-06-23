@@ -23,7 +23,6 @@ class GoToClosestRot(SimpleAction):
         super().process(state, bot)
 
 
-
 qmap = {}
 
 all_actions = [MoveDown(), MoveUp(), MoveLeft(), MoveRight(), TurnLeft(), TurnRight(), GoToClosestRot()]
@@ -162,6 +161,7 @@ def learning_run1(state, random_start=False):
     if random_start: return False
     else: return action_list
 
+
 iterations = 100
 
 state = None
@@ -217,18 +217,69 @@ def learn(task_id):
     #             raise RuntimeError("BAD DUMP")
     return best_sol
 
-args = sys.argv[1:]
 
-if args and len(args) >= 2:
-    k1 = int(args[0])
-    k2 = int(args[1])
+def q_action_no_e(state, prev_actions):
+    l = [str(a) for a in prev_actions[len(prev_actions)-20:]]
+    if l and len(set(l)) == 2:
+        return GoToClosestRot(), None
+    else:
+        return q_action(state)
 
-    for i in range(k1, k2):
-        task_id = "prob-"
-        if i < 10: task_id += "00" + str(i)
-        elif i < 100: task_id += "0" + str(i)
-        else: task_id += str(i)
-        al = learn(task_id)
-        print("res for " + str(task_id) + ": " + str(len(al)))
-        encoder.Encoder.encodeToFile("../q-sol/" + task_id + "-" + str(len(al)) + ".sol", [al])
+def run_qbot(state, qmap_fname):
+    global qmap
+
+    qmap_fname = qmap_fname
+
+    if os.path.isfile(qmap_fname):
+        with open(qmap_fname, 'rb') as f:
+            qmap = pickle.load(f)
+    else:
+        raise RuntimeError('Not found: ../qmaps/main_qmap.pickle')
+
+    action_list = []
+    steps = 0
+    max_steps = state.height * state.width * 3
+
+    global epsilon
+    epsilon = 0 # no exploration
+
+    path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
+    while path and steps < max_steps:
+        if steps % 1000 == 0:
+            print('step = ' + str(steps))
+        (a, _) = q_action_no_e(state, action_list)
+        if isinstance(a, GoToClosestRot):
+            if path:
+                commands = []
+                for (pos, nextPos) in zip(path, path[1:]):
+                    commands.append(moveCommand(pos, nextPos))
+                # print(commands)
+                for c in commands:
+                    action_list.append(c)
+                    state.nextAction(c)
+                    steps += 1
+        else:
+            action_list.append(a)
+            state.nextAction(a)
+            steps += 1
+
+        path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
+    return [action_list]
+
+
+if __name__ == '__main__':
+    args = sys.argv[1:]
+
+    if args and len(args) >= 2:
+        k1 = int(args[0])
+        k2 = int(args[1])
+
+        for i in range(k1, k2):
+            task_id = "prob-"
+            if i < 10: task_id += "00" + str(i)
+            elif i < 100: task_id += "0" + str(i)
+            else: task_id += str(i)
+            al = learn(task_id)
+            print("res for " + str(task_id) + ": " + str(len(al)))
+            encoder.Encoder.encodeToFile("../q-sol/" + task_id + "-" + str(len(al)) + ".sol", [al])
 

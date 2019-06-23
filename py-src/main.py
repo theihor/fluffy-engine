@@ -1,5 +1,6 @@
 import sys
 import solver
+import q
 
 
 def main():
@@ -8,5 +9,13 @@ def main():
     solver.solve(desc, sol, solver.closestRotSolver)
 
 
+def qmain():
+    desc = sys.argv[1]
+    sol = sys.argv[2]
+
+    qmap = sys.argv[3]
+    solver.solve(desc, sol, lambda state: q.run_qbot(state, qmap))
+
+
 if __name__ == '__main__':
-    main()
+    qmain()
