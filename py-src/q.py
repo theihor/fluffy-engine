@@ -1,5 +1,5 @@
 import pathfinder
-from constants import Direction, ATTACHER
+from constants import *
 from solver import moveCommand, collectBoosters
 from actions import *
 import random
@@ -40,7 +40,16 @@ constant_actions = [
 
 
 def all_actions(bot):
-    return constant_actions + [AttachManipulator(ATTACHER.get_position(bot))]
+    lst = constant_actions.copy()
+    #lst.append(AttachManipulator(SimpleAttacher().get_position(bot)))
+    lst.append(AttachManipulator(ExperimentalAttacher(forward).get_position(bot)))
+    lst.append(AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot)))
+    #lst.append(AttachManipulator(ExperimentalAttacher(experimental).get_position(bot)))
+    #lst.append(AttachManipulator(ExperimentalAttacher(long_center).get_position(bot)))
+    #lst.append(AttachManipulator(ExperimentalAttacher(long_left).get_position(bot)))
+    #lst.append(AttachManipulator(ExperimentalAttacher(long_right).get_position(bot)))
+
+    return lst
 
 
 epsilon = 0.001
