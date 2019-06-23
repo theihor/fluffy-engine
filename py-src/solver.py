@@ -98,7 +98,7 @@ def closestRotSolver(st):
             path2 = pathfinder.bfsFind(st, bot.pos,
                                        wrapP(st),
                                        availP=withDrillP(st))
-            if len(path2) < len(path):
+            if path2 is not None and len(path2) < len(path):
                 # print("Attach DRILL at " + str(len(bot.actions)))
                 st.nextAction(AttachDrill())
                 path = path2
