@@ -1,5 +1,5 @@
 import decode
-from constants import ATTACHER
+from constants import ATTACHER, TURN_BOT
 from encoder import Encoder
 from actions import *
 import pathfinder
@@ -59,9 +59,10 @@ def pathToCommands(path, state, bot_num=0):
     for (pos, nextPos) in zip(path, path[1:]):
         commands.append(moveCommand(pos, nextPos))
     for command in commands:
-        new = selectCommand(state, command, bot_num)
-        if new != command:
-            state.nextAction(new)
+        if TURN_BOT:
+            new = selectCommand(state, command, bot_num)
+            if new != command:
+                state.nextAction(new)
         state.nextAction(command)
 
 
