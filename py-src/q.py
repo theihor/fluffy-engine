@@ -24,6 +24,20 @@ class GoToClosestRot(SimpleAction):
         super().process(state, bot)
 
 
+class ShiftRandom(Shift):
+    def __init__(self):
+        self.pos = None
+
+    def validate(self, state: State, bot):
+        return len(state.pods) > 0
+
+    def process(self, state: State, bot):
+        self.pos = random.choice(list(state.pods))
+        super().process(state, bot)
+
+    def __str__(self):
+        return "T"
+
 qmap = {}
 
 
@@ -36,7 +50,9 @@ constant_actions = [
     TurnRight(),
     GoToClosestRot(),
     AttachDrill(),
-    AttachWheels()
+    AttachWheels(),
+    Reset(),
+    ShiftRandom()
 ]
 
 
@@ -54,7 +70,7 @@ def all_actions(bot):
 
 
 epsilon = 0.001
-alpha = 0.01 # learning rate
+alpha = 0.02 # learning rate
 gamma = 0.95  # discount factor
 
 
@@ -218,15 +234,18 @@ def learning_run1(state, random_start=False):
                                      wheels=bot.wheel_duration,
                                      drill=bot.drill_duration)
         # if bot.drill_duration > 3:
-        #     return pathfinder.bfsFind(state, bot.pos,
-        #                           lambda l, x, y: state.cell(x, y)[1] == Cell.ROT,
-        #                           availP=drillableP(state, bot))
+        #     return pathfinder.bfsFindExt(state, bot.pos,
+        #                              lambda l, x, y: state.cell(x, y)[1] == Cell.ROT,
+        #                              wheels=bot.wheel_duration,
+        #                              drill=bot.drill_duration)
         # else:
         #     return pathfinder.bfsFind(state, bot.pos,
         #                               lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
 
     while not state.is_all_clean() and steps < max_steps:
+        #print(steps)
         (a, v, key) = q_action(state, bot)
+        #print(str(a), end='')
         r = 0
         if isinstance(a, GoToClosestRot):
             path = next_path()
@@ -248,7 +267,7 @@ def learning_run1(state, random_start=False):
                         else:
                             steps_from_last_positive_r += 1
             else:
-                continue
+                return (None, state)
         else:
             action_list.append(a)
             state.nextAction(a)
@@ -261,9 +280,6 @@ def learning_run1(state, random_start=False):
             steps_from_last_positive_r += 1
             r = -1 - (steps_from_last_positive_r / 1e5)
 
-        if bot.drill_duration > 0:
-            r -= 0.5
-
         # update Q
 
         (_, v1, _) = q_action(state, bot)
@@ -272,10 +288,8 @@ def learning_run1(state, random_start=False):
         #print("q1 = " + str(qmap[key]))
 
     if random_start: return False
-    else: return action_list
+    else: return action_list, state
 
-
-iterations = 3
 
 task_init_state = None
 saved_task_id = None
@@ -304,19 +318,26 @@ def learn(task_id, qmap_fname):
             with open(qmap_fname, 'rb') as f:
                 qmap = pickle.load(f)
 
-    best_sol = learning_run1(get_state(task_id), random_start=False)
-
+    (best_sol, s) = learning_run1(get_state(task_id), random_start=False)
+    iterations = 2000 // s.width
     if not best_sol: return
 
     best_len = len(best_sol)
+
     for i in range(iterations):
         random_start = False
-        sol = learning_run1(get_state(task_id), random_start=random_start)
-        #if i % 3 == 0:
-        print(str(task_id)+ " " + str(i) + ": " + str(best_len))
+        (sol, _) = learning_run1(get_state(task_id), random_start=random_start)
+        if sol is None: continue
+
+        if i % (iterations // 5) == 0:
+            print(str(task_id) + " " + str(i) + ": " + str(best_len))
+
         if not random_start and best_len >= len(sol):
+            if best_len > len(sol):
+                print(str(task_id) + " " + str(i) + ": " + str(best_len))
             best_sol = sol
             best_len = len(sol)
+
     with FileLock("../qmaps/.lock"):
         with open(qmap_fname, "wb") as f:
             pickle.dump(qmap, f)
@@ -348,39 +369,11 @@ def run_qbot(state, qmap_fname):
     else:
         raise RuntimeError('Not found: ' + qmap_fname)
 
-    action_list = []
-    steps = 0
-    max_steps = state.height * state.width * 3
-
     global epsilon
-    epsilon = 0 # no exploration
-
-    path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
-    while path and steps < max_steps:
-        if steps % 1000 == 0:
-            print('step = ' + str(steps))
-        (a, _) = q_action_no_e(state, action_list)
-        if isinstance(a, GoToClosestRot):
-            if path:
-                commands = []
-                for (pos, nextPos) in zip(path, path[1:]):
-                    commands.append(moveCommand(pos, nextPos))
-                # print(commands)
-                for c in commands:
-                    action_list.append(c)
-                    state.nextAction(c)
-                    steps += 1
-        else:
-            action_list.append(a)
-            state.nextAction(a)
-            steps += 1
-
-        path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
-
-    if steps > max_steps:
-        raise RuntimeError("Failed with maxsteps, probably deadlocked")
-
-    return [action_list]
+    epsilon = 0  # no exploration
+    (_, final_state) = learning_run1(state)
+    print(final_state.tickNum)
+    return final_state
 
 
 def merge_qmaps(qmap_list):

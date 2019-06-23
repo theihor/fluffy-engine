@@ -293,6 +293,7 @@ class State(object):
                 if self.cell(x, y)[1] == Cell.ROT:
                     return False
         return True
+        #return self.total_rot_cells <= 0
 
 def print_cells(cells, w, h):
     for y in reversed(range(h)):
