@@ -257,7 +257,11 @@ class State(object):
         print_cells(self.cells, self.width, self.height)
 
     def is_all_clean(self):
-        return self.total_rot_cells <= 0
+        for x in range(self.width):
+            for y in range(self.height):
+                if self.cell(x, y)[1] == Cell.ROT:
+                    return False
+        return True
 
 def print_cells(cells, w, h):
     for y in reversed(range(h)):

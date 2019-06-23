@@ -26,7 +26,7 @@ class MoveUp(SimpleAction):
         # validate only +1 cell move
         if y >= state.height - 1:
             return False
-        if bot.drill_duration <= 0 and state.cell(x, y + 1)[1] == Cell.OBSTACLE:
+        if bot.drill_duration <= 1 and state.cell(x, y + 1)[1] == Cell.OBSTACLE:
             return False
         return True
 
@@ -47,7 +47,7 @@ class MoveDown(SimpleAction):
         (x, y) = bot.pos
         if y == 0:
             return False
-        if bot.drill_duration <= 0 and state.cell(x, y - 1)[1] == Cell.OBSTACLE:
+        if bot.drill_duration <= 1 and state.cell(x, y - 1)[1] == Cell.OBSTACLE:
             return False
         return True
 
@@ -68,7 +68,7 @@ class MoveLeft(SimpleAction):
         (x, y) = bot.pos
         if x == 0:
             return False
-        if bot.drill_duration <= 0 and state.cell(x - 1, y)[1] == Cell.OBSTACLE:
+        if bot.drill_duration <= 1 and state.cell(x - 1, y)[1] == Cell.OBSTACLE:
             return False
         return True
 
@@ -89,7 +89,7 @@ class MoveRight(SimpleAction):
         (x, y) = bot.pos
         if x >= state.width - 1:
             return False
-        if bot.drill_duration <= 0 and state.cell(x + 1, y)[1] == Cell.OBSTACLE:
+        if bot.drill_duration <= 1 and state.cell(x + 1, y)[1] == Cell.OBSTACLE:
             return False
         return True
 

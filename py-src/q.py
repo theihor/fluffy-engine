@@ -18,7 +18,7 @@ class GoToClosestRot(SimpleAction):
         super().__init__("G")
 
     def validate(self, state: State, bot):
-        return True
+        return bot.wheel_duration <= 0
 
     def process(self, state: State, bot):
         super().process(state, bot)
@@ -212,11 +212,20 @@ def learning_run1(state, random_start=False):
     steps = 0
     steps_from_last_positive_r = 0
 
-    path = pathfinder.bfsFind(state, bot.pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
-    while path and steps < max_steps:
+    def next_path():
+        if bot.drill_duration > 3:
+            return pathfinder.bfsFind(state, bot.pos,
+                                  lambda l, x, y: state.cell(x, y)[1] == Cell.ROT,
+                                  availP=drillableP(state, bot))
+        else:
+            return pathfinder.bfsFind(state, bot.pos,
+                                      lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
+
+    while not state.is_all_clean() and steps < max_steps:
         (a, v, key) = q_action(state, bot)
         r = 0
         if isinstance(a, GoToClosestRot):
+            path = next_path()
             if path:
                 commands = []
                 for (pos, nextPos) in zip(path, path[1:]):
@@ -234,6 +243,8 @@ def learning_run1(state, random_start=False):
                             steps_from_last_positive_r = 0
                         else:
                             steps_from_last_positive_r += 1
+            else:
+                continue
         else:
             action_list.append(a)
             state.nextAction(a)
@@ -246,14 +257,15 @@ def learning_run1(state, random_start=False):
             steps_from_last_positive_r += 1
             r = -1 - (steps_from_last_positive_r / 1e5)
 
+        if bot.drill_duration > 0:
+            r -= 0.5
+
         # update Q
 
         (_, v1, _) = q_action(state, bot)
         #print("r = " + str(r) + ", q = " + str(qmap[key]), end=" ")
         qmap[key] += alpha * (r + gamma * v1 - v)
         #print("q1 = " + str(qmap[key]))
-
-        path = pathfinder.bfsFind(state, bot.pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
 
     if random_start: return False
     else: return action_list

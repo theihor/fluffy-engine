@@ -21,7 +21,7 @@ def drillableP(st, bot=None):
 
     def drill_aval(l):
         # TODO (wheel handling)
-        return drill > l
+        return drill > l + 2
 
     return lambda l, x, y: drill_aval(l) or st.cell(x, y)[1] is not Cell.OBSTACLE
 

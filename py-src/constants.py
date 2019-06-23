@@ -28,9 +28,9 @@ WHEELS_PROC = 1
 DRILL_PROC = 1
 # collect stage
 COLLECTABLE = [
-    # Booster.WHEEL,
+   # Booster.WHEEL,
     Booster.MANIPULATOR,
-    # Booster.DRILL,
+   # Booster.DRILL,
 ]
 # paint stage
 USABLE = [
