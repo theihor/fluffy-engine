@@ -115,7 +115,6 @@ def state_key(state):
 
 
 def get_key(state, bot, action):
-    action = translate_move(bot, action)
     if isinstance(action, AttachDrill) or\
             isinstance(action, AttachManipulator) or \
             isinstance(action, AttachWheels):
@@ -126,23 +125,30 @@ def get_key(state, bot, action):
 
 def q_action(state, bot):
     valid_actions = [a for a in all_actions(bot) if translate_move(bot, a).validate(state, bot)]
+    kmap = {}
     def value(a):
-        key = get_key(state, bot, a)
+        if a in kmap:
+            key = kmap[a]
+        else:
+            key = get_key(state, bot, a)
+            kmap[a] = key
         if not key in qmap:
             qmap[key] = random.random() * 1e-5
-        return qmap[key]
+        return qmap[key], key
     if random.random() < epsilon:
         a = random.choice(valid_actions)
-        return (a, value(a))
+        (v, key) = value(a)
+        return (translate_move(bot, a), v, key)
     else:
         best = valid_actions[0]
-        bestv = value(best)
+        (bestv, best_key) = value(best)
         for a in valid_actions[1:]:
-            v = value(a)
+            (v, key) = value(a)
             if v > bestv:
                 bestv = v
                 best = a
-        return (best, bestv)
+                best_key = key
+        return (translate_move(bot, best), bestv, best_key)
 
 
 def translate_move(bot, action):
@@ -178,27 +184,20 @@ def learning_run1(state, random_start=False):
 
     bot = state.bots[0]
     action_list = []
-    def add_action(a, translate=True):
-        a1 = a
-        if translate:
-            a1 = translate_move(bot, a)
-        action_list.append(a1)
-        return a1
+
     max_steps = state.height * state.width * 2
 
     # collect boosters
-    bc = 0
-    for b in state.boosters:
-        bc += state.boosters[b]
-    while bc > 0:
-        path = pathfinder.bfsFind(state, bot.pos,
-                                  boosterP(state),
-                                  availP=drillableP(state, bot))
+    while True:
+        #print(bot.pos)
+        path = pathfinder.bfsFind(state, bot.pos, boosterP(state))
         if path is None: break
 
         for (pos, nextPos) in zip(path, path[1:]):
-            add_action(moveCommand(pos, nextPos), translate=False)
-        bc -= 1
+            a = moveCommand(pos, nextPos)
+            action_list.append(a)
+            state.nextAction(a)
+
 
     # if random_start:
     #     start_pos = None
@@ -215,8 +214,7 @@ def learning_run1(state, random_start=False):
 
     path = pathfinder.bfsFind(state, bot.pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
     while path and steps < max_steps:
-        (a, v) = q_action(state, bot)
-        key = get_key(state, bot, a)
+        (a, v, key) = q_action(state, bot)
         r = 0
         if isinstance(a, GoToClosestRot):
             if path:
@@ -227,7 +225,7 @@ def learning_run1(state, random_start=False):
                 #print([str(c) for c in commands])
                 for c in commands:
                     if c.validate(state, state.bots[0]):
-                        add_action(c, translate=False)
+                        action_list.append(c)
                         state.nextAction(c)
                         steps += 1
                         r -= 1
@@ -237,8 +235,8 @@ def learning_run1(state, random_start=False):
                         else:
                             steps_from_last_positive_r += 1
         else:
-            a1 = add_action(a, translate=True)
-            state.nextAction(a1)
+            action_list.append(a)
+            state.nextAction(a)
             steps += 1
 
         if state.last_painted > 0:
@@ -250,7 +248,7 @@ def learning_run1(state, random_start=False):
 
         # update Q
 
-        (_, v1) = q_action(state, bot)
+        (_, v1, _) = q_action(state, bot)
         #print("r = " + str(r) + ", q = " + str(qmap[key]), end=" ")
         qmap[key] += alpha * (r + gamma * v1 - v)
         #print("q1 = " + str(qmap[key]))
@@ -261,7 +259,7 @@ def learning_run1(state, random_start=False):
     else: return action_list
 
 
-iterations = 3
+iterations = 10
 
 task_init_state = None
 saved_task_id = None
@@ -282,14 +280,12 @@ def get_state(task_id):
         return get_state(task_id)
 
 
-def learn(task_id):
+def learn(task_id, qmap_fname):
     global qmap
 
-    dumped_qmap_name = "../qmaps/main_qmap.pickle"
-
-    if os.path.isfile(dumped_qmap_name):
+    if os.path.isfile(qmap_fname):
         with FileLock("../qmaps/.lock"):
-            with open(dumped_qmap_name, 'rb') as f:
+            with open(qmap_fname, 'rb') as f:
                 qmap = pickle.load(f)
 
     best_sol = learning_run1(get_state(task_id), random_start=False)
@@ -300,13 +296,13 @@ def learn(task_id):
     for i in range(iterations):
         random_start = False
         sol = learning_run1(get_state(task_id), random_start=random_start)
-        if i % 2 == 0:
+        if i % 3 == 0:
             print(str(task_id)+ " " + str(i) + ": " + str(best_len))
         if not random_start and best_len >= len(sol):
             best_sol = sol
             best_len = len(sol)
     with FileLock("../qmaps/.lock"):
-        with open(dumped_qmap_name, "wb") as f:
+        with open(qmap_fname, "wb") as f:
             pickle.dump(qmap, f)
 
     #print(qmap)
@@ -334,7 +330,7 @@ def run_qbot(state, qmap_fname):
         with open(qmap_fname, 'rb') as f:
             qmap = pickle.load(f)
     else:
-        raise RuntimeError('Not found: ../qmaps/main_qmap.pickle')
+        raise RuntimeError('Not found: ' + qmap_fname)
 
     action_list = []
     steps = 0
@@ -374,16 +370,19 @@ def run_qbot(state, qmap_fname):
 if __name__ == '__main__':
     args = sys.argv[1:]
 
-    if args and len(args) >= 2:
+    if args and len(args) >= 3:
         k1 = int(args[0])
         k2 = int(args[1])
+        qmap_fname = args[2]
 
         for i in range(k1, k2):
             task_id = "prob-"
             if i < 10: task_id += "00" + str(i)
             elif i < 100: task_id += "0" + str(i)
             else: task_id += str(i)
-            al = learn(task_id)
+            al = learn(task_id, qmap_fname)
             print("res for " + str(task_id) + ": " + str(len(al)))
             encoder.Encoder.encodeToFile("../q-sol/" + task_id + "-" + str(len(al)) + ".sol", [al])
+    else: print('Not enough arguments')
+
 
