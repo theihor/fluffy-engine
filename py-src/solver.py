@@ -99,7 +99,7 @@ def closestRotSolver(st):
                                        wrapP(st),
                                        availP=withDrillP(st))
             if len(path2) < len(path):
-                print("Attach DRILL at " + str(len(bot.actions)))
+                # print("Attach DRILL at " + str(len(bot.actions)))
                 st.nextAction(AttachDrill())
                 path = path2
         if path is None:
@@ -107,11 +107,11 @@ def closestRotSolver(st):
         pathToCommands(path, st)
         if st.boosters[Booster.WHEEL] > 0 and bot.wheel_duration <= 0:
             if random.random() > WHEELS_PROC:
-                print("Attach WHEELS at " + str(len(bot.actions)))
+                # print("Attach WHEELS at " + str(len(bot.actions)))
                 st.nextAction(AttachWheels())
         if st.boosters[Booster.DRILL] > 0 and bot.drill_duration <= 0:
             if random.random() > DRILL_PROC:
-                print("Attach DRILL at " + str(len(bot.actions)))
+                # print("Attach DRILL at " + str(len(bot.actions)))
                 st.nextAction(AttachDrill())
     return st.actions()
 
