@@ -35,7 +35,7 @@ constant_actions = [
     TurnRight(),
     GoToClosestRot(),
     AttachDrill(),
-    AttachWheels()
+    #AttachWheels()
 ]
 
 
@@ -211,7 +211,7 @@ def learning_run1(state, random_start=False):
     else: return action_list
 
 
-iterations = 10
+iterations = 20
 
 state = None
 id = None
@@ -250,7 +250,7 @@ def learn(task_id):
     for i in range(iterations):
         random_start = False
         sol = learning_run1(get_state(task_id), random_start=random_start)
-        if i % 2 == 0:
+        if i % 5 == 0:
             print(str(task_id)+ " " + str(i) + ": " + str(best_len))
         if not random_start and best_len >= len(sol):
             best_sol = sol
