@@ -21,11 +21,11 @@ class Booster(Enum):
 DRILL_DURATION = 30
 WHEELS_DURATION = 50
 STRICT_VALIDATION = False
-ATTACHER = ExperimentalAttacher(forward)
+ATTACHER = SimpleAttacher()
 TURN_BOT = False
 # 0 - always use, 1 - never use
-WHEELS_PROC = 0
-DRILL_PROC = 0
+WHEELS_PROC = 1
+DRILL_PROC = 1
 # collect stage
 COLLECTABLE = [
     # Booster.WHEEL,
