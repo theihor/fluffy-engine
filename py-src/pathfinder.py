@@ -2,7 +2,8 @@ from constants import Cell
 
 
 def bfsFind(state, start, endP, availP=None,
-            register=lambda l, x, y: None):
+            register=lambda l, x, y: None,
+            max_path_len=None):
     prev = [row[:] for row in [[None] * state.width]
             * state.height]
     if availP is None:
@@ -38,6 +39,8 @@ def bfsFind(state, start, endP, availP=None,
                             return
             front = newFront
             pathLen += 1
+            if max_path_len is not None and pathLen > max_path_len:
+                return
 
     find()
     if endX == -1:
@@ -55,7 +58,8 @@ def bfsFind(state, start, endP, availP=None,
 
 
 def bfsFindClosest(state, start, endP, availP=lambda x, y: True,
-                   rank=lambda x, y: 1):
+                   rank=lambda x, y: 1,
+                   max_path_len=None):
     prev = [row[:] for row in [[None] * state.width]
             * state.height]
 
@@ -85,7 +89,9 @@ def bfsFindClosest(state, start, endP, availP=lambda x, y: True,
                         found.append((x1, y1))
         front = newFront
         pathLen += 1
-        if len(found) > 0:
+        if max_path_len is not None and pathLen > max_path_len:
+            break
+        if max_path_len is None and len(found) > 0:
             break
     if len(found) == 0:
         return None
