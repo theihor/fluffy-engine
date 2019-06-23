@@ -166,9 +166,17 @@ class AttachManipulator(SimpleAction):
         (self.x, self.y) = coords
 
     def validate(self, state: State, bot):
+        #print("validating: " + str(self))
         if state.boosters[Booster.MANIPULATOR] <= 0:
             return False
-        return bot.is_attachable(self.x, self.y)
+        (bx, by) = bot.pos
+        (x, y) = (bx + self.x, by + self.y)
+        if x < 0 or x >= state.width or y < 0 or y >= state.height:
+            return False
+        elif state.cell(x, y)[1] == Cell.OBSTACLE:
+            return False
+        else:
+            return bot.is_attachable(self.x, self.y)
 
     def process(self, state: State, bot):
         super().process(state, bot)

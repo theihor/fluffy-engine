@@ -1,5 +1,6 @@
 import pathfinder
 from constants import *
+from predicates import drillableP, boosterP
 from solver import moveCommand, collectBoosters
 from actions import *
 import random
@@ -147,24 +148,38 @@ def q_action(state):
 
 def learning_run1(state, random_start=False):
 
-    collectBoosters(state, state.bots[0])
-    action_list = state.bots[0].actions
-
+    bot = state.bots[0]
+    action_list = []
     max_steps = state.height * state.width * 2
 
-    if random_start:
-        # start_pos = None
-        # while not start_pos or not state.cell(*start_pos)[1] == Cell.CLEAN:
-        #     start_pos = (random.randint(0, state.width -1),
-        #                  random.randint(0, state.height - 1))
-        pass
-    else:
-        start_pos = state.bots[0].pos
+    # collect boosters
+    bc = 0
+    for b in state.boosters:
+        bc += state.boosters[b]
+    while bc > 0:
+        path = pathfinder.bfsFind(state, bot.pos,
+                                  boosterP(state),
+                                  availP=drillableP(state, bot))
+        if path is None: break
+
+        for (pos, nextPos) in zip(path, path[1:]):
+            action_list.append(moveCommand(pos, nextPos))
+        bc -= 1
+
+    # if random_start:
+    #     start_pos = None
+    #     while not start_pos or not state.cell(*start_pos)[1] == Cell.CLEAN:
+    #         start_pos = (random.randint(0, state.width -1),
+    #                      random.randint(0, state.height - 1))
+    #     pass
+    # else:
+    #     start_pos = state.bots[0].pos
+    # state.setBotPos(*start_pos)
 
     steps = 0
     steps_from_last_positive_r = 0
-    #state.setBotPos(*start_pos)
-    path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
+
+    path = pathfinder.bfsFind(state, bot.pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
     while path and steps < max_steps:
         (a, v) = q_action(state)
         key = get_key(state, a)
@@ -174,7 +189,8 @@ def learning_run1(state, random_start=False):
                 commands = []
                 for (pos, nextPos) in zip(path, path[1:]):
                     commands.append(moveCommand(pos, nextPos))
-                # print(commands)
+                #print(state.bots[0].pos, path)
+                #print([str(c) for c in commands])
                 for c in commands:
                     if c.validate(state, state.bots[0]):
                         action_list.append(c)
@@ -205,30 +221,30 @@ def learning_run1(state, random_start=False):
         qmap[key] += alpha * (r + gamma * v1 - v)
         #print("q1 = " + str(qmap[key]))
 
-        path = pathfinder.bfsFind(state, state.bots[0].pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
+        path = pathfinder.bfsFind(state, bot.pos, lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
 
     if random_start: return False
     else: return action_list
 
 
-iterations = 20
+iterations = 3
 
-state = None
-id = None
+task_init_state = None
+saved_task_id = None
 
 
 def get_state(task_id):
-    global state, id
-    if not state:
+    global task_init_state, saved_task_id
+    if not task_init_state:
         filename = "../desc/" + task_id + ".desc"
         print(filename)
-        state = State.decode(decode.parse_task(filename))
-        id = task_id
-        return copy.deepcopy(state)
-    elif id == task_id:
-        return copy.deepcopy(state)
+        task_init_state = State.decode(decode.parse_task(filename))
+        saved_task_id = task_id
+        return copy.deepcopy(task_init_state)
+    elif saved_task_id == task_id:
+        return copy.deepcopy(task_init_state)
     else:
-        state = None
+        task_init_state = None
         return get_state(task_id)
 
 
@@ -250,7 +266,7 @@ def learn(task_id):
     for i in range(iterations):
         random_start = False
         sol = learning_run1(get_state(task_id), random_start=random_start)
-        if i % 5 == 0:
+        if i % 2 == 0:
             print(str(task_id)+ " " + str(i) + ": " + str(best_len))
         if not random_start and best_len >= len(sol):
             best_sol = sol
