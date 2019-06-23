@@ -271,7 +271,7 @@ def learning_run1(state, random_start=False):
     else: return action_list
 
 
-iterations = 10
+iterations = 20
 
 task_init_state = None
 saved_task_id = None
@@ -379,10 +379,43 @@ def run_qbot(state, qmap_fname):
     return [action_list]
 
 
-if __name__ == '__main__':
-    args = sys.argv[1:]
+def merge_qmaps(qmap_list):
+    acc_qmap = {}
+    for qmap in qmap_list:
+        for key in qmap:
+            if key in acc_qmap:
+                acc_qmap[key].append(qmap[key])
+            else:
+                acc_qmap[key] = [qmap[key]]
+    res_qmap = {}
+    for key in acc_qmap:
+        res_qmap[key] = sum(acc_qmap[key]) / len(acc_qmap[key])
 
+    return res_qmap
+
+
+def merge_main(args):
+    res_qmap_fname = args[0]
+
+    qmaps = []
+    for qmap_fname in args[1:]:
+        with open(qmap_fname, 'rb') as f:
+            qmap = pickle.load(f)
+            qmaps.append(qmap)
+
+    res_qmap = merge_qmaps(qmaps)
+    with open(res_qmap_fname, "wb+") as f:
+        pickle.dump(res_qmap, f)
+
+
+def _main(args):
     if args and len(args) >= 3:
+        print(args)
+        if args[0] == 'merge':
+            if args: merge_main(args[1:])
+            else: print('usage: merge result_qmap qmap1 qmap2 ...')
+            return
+
         k1 = int(args[0])
         k2 = int(args[1])
         qmap_fname = args[2]
@@ -396,5 +429,12 @@ if __name__ == '__main__':
             print("res for " + str(task_id) + ": " + str(len(al)))
             encoder.Encoder.encodeToFile("../q-sol/" + task_id + "-" + str(len(al)) + ".sol", [al])
     else: print('Not enough arguments')
+
+
+
+if __name__ == '__main__':
+    args = sys.argv[1:]
+    _main(args)
+
 
 
