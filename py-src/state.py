@@ -76,7 +76,7 @@ class State(object):
             Booster.MANIPULATOR: 0,
             Booster.MYSTERIOUS: 0,
             Booster.TELEPORT: 0,
-            Booster.CLONE: 0
+            Booster.CLONE: 0,
         }
         self.createCells(contour)
         for obstacle in obstacles:
@@ -248,6 +248,7 @@ class State(object):
     def repaint(self):
         for bot in self.bots:
             bot.repaint(self)
+            self.cells[bot.pos[1]][bot.pos[0]] = (None, Cell.CLEAN)
 
     def removeBooster(self, pos: tuple):
         self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)

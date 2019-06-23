@@ -23,11 +23,10 @@ class MoveUp(SimpleAction):
 
     def validate(self, state: State, bot):
         (x, y) = bot.pos
-        if bot.wheel_duration > 0: dy = 2
-        else: dy = 1
-        if y + dy >= state.height:
+        # validate only +1 cell move
+        if y >= state.height - 1:
             return False
-        if state.cell(x, y + dy)[1] == Cell.OBSTACLE:
+        if bot.drill_duration <= 0 and state.cell(x, y + 1)[1] == Cell.OBSTACLE:
             return False
         return True
 
@@ -36,7 +35,7 @@ class MoveUp(SimpleAction):
         (x, y) = bot.pos
         state.setBotPos(x, y + 1)
         bot.process(state)
-        if bot.wheel_duration > 0:
+        if bot.wheel_duration > 0 and self.validate(state, bot):
             state.setBotPos(x, y + 2)
 
 
@@ -46,11 +45,9 @@ class MoveDown(SimpleAction):
 
     def validate(self, state: State, bot):
         (x, y) = bot.pos
-        if bot.wheel_duration > 0: dy = 2
-        else: dy = 1
-        if y - dy < 0:
+        if y == 0:
             return False
-        if state.cell(x, y - dy)[1] == Cell.OBSTACLE:
+        if bot.drill_duration <= 0 and state.cell(x, y - 1)[1] == Cell.OBSTACLE:
             return False
         return True
 
@@ -59,7 +56,7 @@ class MoveDown(SimpleAction):
         (x, y) = bot.pos
         state.setBotPos(x, y - 1)
         bot.process(state)
-        if bot.wheel_duration > 0:
+        if bot.wheel_duration > 0 and self.validate(state, bot):
             state.setBotPos(x, y - 2)
 
 
@@ -69,11 +66,9 @@ class MoveLeft(SimpleAction):
 
     def validate(self, state: State, bot):
         (x, y) = bot.pos
-        if bot.wheel_duration > 0: dx = 2
-        else: dx = 1
-        if x - dx < 0:
+        if x == 0:
             return False
-        if state.cell(x - dx, y)[1] == Cell.OBSTACLE:
+        if bot.drill_duration <= 0 and state.cell(x - 1, y)[1] == Cell.OBSTACLE:
             return False
         return True
 
@@ -82,7 +77,7 @@ class MoveLeft(SimpleAction):
         (x, y) = bot.pos
         state.setBotPos(x - 1, y)
         bot.process(state)
-        if bot.wheel_duration > 0:
+        if bot.wheel_duration > 0 and self.validate(state, bot):
             state.setBotPos(x - 2, y)
 
 
@@ -92,11 +87,9 @@ class MoveRight(SimpleAction):
 
     def validate(self, state: State, bot):
         (x, y) = bot.pos
-        if bot.wheel_duration > 0: dx = 2
-        else: dx = 1
-        if x + dx >= state.width:
+        if x >= state.width - 1:
             return False
-        if state.cell(x + dx, y)[1] == Cell.OBSTACLE:
+        if bot.drill_duration <= 0 and state.cell(x + 1, y)[1] == Cell.OBSTACLE:
             return False
         return True
 
@@ -180,11 +173,7 @@ class AttachManipulator(SimpleAction):
     def process(self, state: State, bot):
         super().process(state, bot)
         bot.attach(self.x, self.y)
+        state.boosters[Booster.MANIPULATOR] -= 1
 
     def __str__(self):
         return "B({},{})".format(self.x, self.y)
-
-
-
-
-
