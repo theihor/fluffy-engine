@@ -1,3 +1,4 @@
+#!/bin/bash
 num_procs=8
 num_jobs="\j"
 
