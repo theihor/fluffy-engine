@@ -28,6 +28,8 @@ class MoveUp(SimpleAction):
             return False
         if bot.drill_duration <= 1 and state.cell(x, y + 1)[1] == Cell.OBSTACLE:
             return False
+        if bot.wheel_duration > 0 and (y >= state.height - 2 or state.cell(x, y + 2)[1] == Cell.OBSTACLE):
+            return False
         return True
 
     def process(self, state: State, bot):
@@ -48,6 +50,8 @@ class MoveDown(SimpleAction):
         if y == 0:
             return False
         if bot.drill_duration <= 1 and state.cell(x, y - 1)[1] == Cell.OBSTACLE:
+            return False
+        if bot.wheel_duration > 0 and (y <= 1 or state.cell(x, y - 2)[1] == Cell.OBSTACLE):
             return False
         return True
 
@@ -70,6 +74,8 @@ class MoveLeft(SimpleAction):
             return False
         if bot.drill_duration <= 1 and state.cell(x - 1, y)[1] == Cell.OBSTACLE:
             return False
+        if bot.wheel_duration > 0 and (x <= 1 or state.cell(x - 2, y)[1] == Cell.OBSTACLE):
+            return False
         return True
 
     def process(self, state: State, bot):
@@ -90,6 +96,8 @@ class MoveRight(SimpleAction):
         if x >= state.width - 1:
             return False
         if bot.drill_duration <= 1 and state.cell(x + 1, y)[1] == Cell.OBSTACLE:
+            return False
+        if bot.wheel_duration > 0 and (x >= state.width - 2 or state.cell(x + 2, y)[1] == Cell.OBSTACLE):
             return False
         return True
 
