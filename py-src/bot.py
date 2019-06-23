@@ -62,6 +62,7 @@ class Bot:
             state.removeBooster(self.pos)
             print('Collected ' + str(bot_cell[0]))
             state.boosters[bot_cell[0]] += 1
+            state.lockBoosters = 2
         if self.save_log:
             if self.last_booster is None:
                 self.last_booster = bot_cell[0]
@@ -73,7 +74,7 @@ class Bot:
         coords = [real(pos) for pos in self.manipulators] + [self.pos]
         num_painted = 0
         for pos in coords:
-            num_painted += state.paintCell(pos[0], pos[1])
+            num_painted += state.paintCell(*pos, *self.pos)
         if self.save_log:
             self.last_clean_num += num_painted
 

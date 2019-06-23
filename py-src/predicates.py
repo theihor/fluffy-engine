@@ -6,6 +6,10 @@ def boosterP(st):
     return lambda l, x, y: st.cell(x, y)[0] in COLLECTABLE
 
 
+def usableP(st):
+    return lambda l, x, y: st.cell(x, y)[0] is not None
+
+
 # called for pathfinding when paining cells
 def wrapP(st):
     return lambda l, x, y: st.cell(x, y)[1] == Cell.ROT \
@@ -28,6 +32,12 @@ def drillableP(st, bot=None):
         return drill > l
 
     return lambda l, x, y: drill_aval(l) or st.cell(x, y)[1] is not Cell.OBSTACLE
+
+
+def parallelP(st, aimed):
+    return lambda l, x, y: (x, y) not in aimed and \
+                           (st.cell(x, y)[1] == Cell.ROT
+                            or st.cell(x, y)[0] in USABLE)
 
 
 # is the cell available if DRILL is used before pathfinding

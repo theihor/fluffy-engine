@@ -6,6 +6,7 @@ from predicates import *
 from solver import selectCommand, moveCommand
 
 actions = [[]]
+aimed = [(-1, -1)]
 
 
 def pathToCommands(path, state, bot_num):
@@ -18,6 +19,7 @@ def pathToCommands(path, state, bot_num):
                 commands.append(new)
         commands.append(command)
     global actions
+    aimed[bot_num] = path[-1]
     actions[bot_num] += commands
 
 
@@ -38,13 +40,13 @@ def useClone(st, bot_num):
 boostersAvailable = True
 
 
-def collectBoosters(st, bot_num):
+def collectBoosters(st, bot_num, pred=boosterP):
     global boostersAvailable
     if not boostersAvailable:
         return False
     bot = st.bots[bot_num]
     path = pathfinder.bfsFind(st, bot.pos,
-                              boosterP(st),
+                              pred(st),
                               availP=drillableP(st, bot))
     if path is None:
         boostersAvailable = False
@@ -55,24 +57,23 @@ def collectBoosters(st, bot_num):
 
 def useBooster(st, bot_num):
     bot = st.bots[bot_num]
-    ret_val = False
     if st.boosters[Booster.MANIPULATOR] > 0:
         command = AttachManipulator(ATTACHER.get_position(bot))
         global actions
         actions[bot_num].append(command)
-        ret_val = True
+        return True
     if st.boosters[Booster.CLONE] > 0:
         useClone(st, bot_num)
-        ret_val = True
-    return ret_val
+        return True
+    return False
 
 
 def parallelRotSolver(st, bot_num):
     global actions
     bot = st.bots[bot_num]
     path = pathfinder.bfsFind(st, bot.pos,
-                              wrapP(st),
-                              availP=drillableP(st))
+                              parallelP(st, aimed),
+                              availP=drillableP(st, bot))
     # if st.boosters[Booster.DRILL] > 0 and bot.drill_duration <= 0:
     #     path2 = pathfinder.bfsFind(st, bot.pos,
     #                                wrapP(st),
@@ -96,34 +97,27 @@ def parallelRotSolver(st, bot_num):
 
 
 def drunkMasters(st):
-    global actions
+    global actions, aimed
     collectBoosters(st, 0)
     step = 0
-    while True:
+    while not st.is_cleaned():
         if all([len(x) > 0 for x in actions]):
             st.nextActions([x[0] for x in actions])
-            # print(step)
-            if step == 13032:
-                break
+            print("{}: {}".format(step, st.clean_left))
+            # if step == 11486:
+            #     break
             step += 1
-            i = 0
-            for x in actions:
-                if len(x) > 0 and isinstance(x[0], CloneAction):
-                    if len(st.bots) > len(actions):
-                        print('Create new actions')
-                        actions += [[]]
-                    print("Clone action")
-                i += 1
+            if len(st.bots) > len(actions):
+                print('Create new actions')
+                actions += [[]]
+                aimed += [(-1, -1)]
+                collectBoosters(st, len(st.bots) - 1, usableP)
             for i in range(0, len(actions)):
                 actions[i] = actions[i][1:]
         bot_num = 0
         for x in actions:
             if len(x) == 0:
-                if bot_num == 0:
-                    useBooster(st, bot_num)
-                else:
-                    a =1
-                    pass
+                useBooster(st, bot_num)
                 if bot_num > 0 or not collectBoosters(st, bot_num):
                     parallelRotSolver(st, bot_num)
             bot_num += 1

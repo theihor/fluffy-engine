@@ -43,8 +43,9 @@ COLLECTABLE = [
 ]
 # paint stage
 USABLE = [
-    # Booster.WHEEL,
-    # Booster.MANIPULATOR,
-    # Booster.DRILL,
+    Booster.WHEEL,
+    Booster.MANIPULATOR,
+    Booster.DRILL,
     # Booster.CLONE,
+    # Booster.TELEPORT,
 ]

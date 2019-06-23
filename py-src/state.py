@@ -67,6 +67,7 @@ class State(object):
     def __init__(self, contour, botPos: tuple, obstacles, boosters):
         self.bots = [Bot(botPos)]
         # map [booster -> amount]
+        self.lockBoosters = 0
         self.boosters = {
             Booster.DRILL: 0,
             Booster.WHEEL: 0,
@@ -81,9 +82,19 @@ class State(object):
                 self.fillContour(obstacle, (None, Cell.OBSTACLE))
         self.addBoosters(boosters)
         self.tickNum = 0
+        self.clean_left = 0
         self.repaint()
         self.save_log = False
         self.pods = set()
+        self.clean_left_f()
+
+    def clean_left_f(self):
+        self.clean_left = 0
+        for y in self.cells:
+            for x in y:
+                if x[1] == Cell.ROT:
+                    self.clean_left += 1
+        return self.clean_left
 
     def set_save_log(self):
         self.save_log = True
@@ -223,13 +234,16 @@ class State(object):
                     y = y + dy
         return True
 
-    def paintCell(self, x, y):
+    def paintCell(self, x, y, bx=None, by=None):
+        if bx is None:
+            (bx, by) = self.botPos()
         num_painted = 0
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
-            if cell[1] == Cell.ROT and self.visible((x, y)):
+            if cell[1] == Cell.ROT and self.visibleFrom(bx, by, (x, y)):
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
                 num_painted = 1
+                self.clean_left -= 1
         return num_painted
 
     def tryPaintCellWith(self, bx, by, x, y, func):
@@ -256,6 +270,8 @@ class State(object):
                 #                            [str(x) for x in bot.actions]))
                 pass
         self.tickNum += 1
+        if self.lockBoosters > 0:
+            self.lockBoosters -= 1
         self.repaint()
 
     def nextAction(self, action):
@@ -271,8 +287,13 @@ class State(object):
                 self.cells[bot.pos[1]][bot.pos[0]] = (None, Cell.CLEAN)
 
     def removeBooster(self, pos: tuple):
+        if self.cell(*pos)[1] == Cell.ROT:
+            self.clean_left -= 1
         if self.cell(*pos)[0] != Booster.MYSTERIOUS:
             self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
+
+    def is_cleaned(self):
+        return self.clean_left == 0
 
     def show(self):
         for y in reversed(range(self.height)):
