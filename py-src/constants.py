@@ -18,6 +18,12 @@ class Booster(Enum):
     CLONE = auto()
 
 
+class Direction(Enum):
+    LEFT = auto()
+    RIGHT = auto()
+    UP = auto()
+    DOWN = auto()
+
 DRILL_DURATION = 30
 WHEELS_DURATION = 50
 STRICT_VALIDATION = False
@@ -30,6 +36,7 @@ DRILL_PROC = 1
 COLLECTABLE = [
     # Booster.WHEEL,
     Booster.MANIPULATOR,
+    # Booster.TELEPORT,
     # Booster.DRILL,
     Booster.CLONE,
     # Booster.MYSTERIOUS,

@@ -9,11 +9,18 @@ import svgwrite
 import svg_colors
 import tsp_solver.greedy as tsp
 from predicates import *
+import copy
+from optimizer import optimize, optimize_small_clean, optimize_long_moves, optimize_teleports
 
 
 def solve(taskFile, solutionFile, solver):
     st = State.decode(decode.parse_task(taskFile))
+    # init_st = copy.deepcopy(st)
     new_state = solver(st)
+    # for it in range(1):
+    #     new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_small_clean)
+    #     new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_long_moves)
+    #     new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_teleports)
     Encoder.encodeToFile(solutionFile, new_state)
 
 
@@ -59,11 +66,35 @@ def selectCommand(state, command, bot_num):
     return command
 
 
+# def pathToCommands(path, state, bot_num=0):
+#     commands = []
+#     for (pos, nextPos) in zip(path, path[1:]):
+#         commands.append(moveCommand(pos, nextPos))
+#     for command in commands:
+#         if TURN_BOT:
+#             new = selectCommand(state, command, bot_num)
+#             if new != command:
+#                 state.nextAction(new)
+#         state.nextAction(command)
+
+
 def pathToCommands(path, state, bot_num=0):
-    commands = []
+    original_path_sells_state = {}
+    last_pos = path[-1]
     for (pos, nextPos) in zip(path, path[1:]):
-        commands.append(moveCommand(pos, nextPos))
-    for command in commands:
+        original_path_sells_state.update({nextPos: state.cells[nextPos[1]][nextPos[0]][1]})
+    for (pos, nextPos) in zip(path, path[1:]):
+        # if during bot movement target pos is already wrapped by his manipulators
+        # then we need to stop moving towards that point and select another
+
+        # check for last position
+        if original_path_sells_state[last_pos] != state.cells[last_pos[1]][last_pos[0]][1]:
+            break;
+        # check for next position
+        if original_path_sells_state[nextPos] != state.cells[nextPos[1]][nextPos[0]][1]:
+            break
+
+        command = moveCommand(pos, nextPos)
         if TURN_BOT:
             new = selectCommand(state, command, bot_num)
             if new != command:
@@ -83,6 +114,7 @@ def collectBoosters(st, bot_num):
 
         if st.boosters[Booster.MANIPULATOR] > 0:
             command = AttachManipulator(ATTACHER.get_position(bot))
+        # TODO (all boosters)
         else:
             continue
         st.nextAction(command)

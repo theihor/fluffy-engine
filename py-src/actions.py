@@ -17,6 +17,9 @@ class SimpleAction:
     def __str__(self):
         return self.value
 
+    def booster_action(self):
+        return False
+
 
 class MoveUp(SimpleAction):
     def __init__(self):
@@ -136,7 +139,12 @@ class TurnLeft(SimpleAction):
         bot.turnLeft()
 
 
-class AttachWheels(SimpleAction):
+class BoosterAction(SimpleAction):
+    def booster_action(self):
+        return True
+
+
+class AttachWheels(BoosterAction):
     def __init__(self):
         super().__init__("F")
 
@@ -149,7 +157,7 @@ class AttachWheels(SimpleAction):
         state.boosters[Booster.WHEEL] -= 1
 
 
-class AttachDrill(SimpleAction):
+class AttachDrill(BoosterAction):
     def __init__(self):
         super().__init__("L")
 
@@ -162,7 +170,7 @@ class AttachDrill(SimpleAction):
         state.boosters[Booster.DRILL] -= 1
 
 
-class AttachManipulator(SimpleAction):
+class AttachManipulator(BoosterAction):
     def __init__(self, coords: tuple):
         (self.x, self.y) = coords
 
@@ -178,6 +186,37 @@ class AttachManipulator(SimpleAction):
 
     def __str__(self):
         return "B({},{})".format(self.x, self.y)
+
+
+class Reset(BoosterAction):
+    def __init__(self):
+        super().__init__("R")
+
+    def validate(self, state: State, bot):
+        return (state.boosters[Booster.TELEPORT] > 0
+                and bot.pos not in state.pods)
+
+    def process(self, state: State, bot):
+        super().process(state, bot)
+        state.pods.add(bot.pos)
+        state.boosters[Booster.TELEPORT] -= 1
+
+
+class Shift(BoosterAction):
+    def __init__(self, pos):
+        self.pos = pos
+
+    def validate(self, state: State, bot):
+        return self.pos in state.pods
+
+    def process(self, state: State, bot):
+        super().process(state, bot)
+        (x, y) = self.pos
+        state.setBotPos(x, y)
+        bot.process(state)
+
+    def __str__(self):
+        return "T({},{})".format(self.pos[0], self.pos[1])
 
 
 class CloneAction(SimpleAction):
