@@ -2,10 +2,9 @@ from filelock import FileLock
 
 class Encoder:
     @staticmethod
-    def encodeToFile(filename, solution: list):
-        with FileLock(filename + ".lock"):
-            file = open(filename, "w")
-            for actions in solution:
+    def encodeToFile(filename, state):
+        file = open(filename + "." + str(state.tickNum), "w")
+        for actions in state.actions():
                 for action in actions:
                     file.write(str(action))
             file.close()

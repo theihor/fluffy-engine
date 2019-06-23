@@ -2,7 +2,8 @@ from constants import Cell
 
 
 def bfsFind(state, start, endP, availP=None,
-            register=lambda l, x, y: None):
+            register=lambda l, x, y: None,
+            max_path_len=None):
     prev = [row[:] for row in [[None] * state.width]
             * state.height]
     if availP is None:
@@ -38,6 +39,8 @@ def bfsFind(state, start, endP, availP=None,
                             return
             front = newFront
             pathLen += 1
+            if max_path_len is not None and pathLen > max_path_len:
+                return
 
     find()
     if endX == -1:
@@ -55,7 +58,8 @@ def bfsFind(state, start, endP, availP=None,
 
 
 def bfsFindClosest(state, start, endP, availP=lambda x, y: True,
-                   rank=lambda x, y: 1):
+                   rank=lambda x, y: 1,
+                   max_path_len=None):
     prev = [row[:] for row in [[None] * state.width]
             * state.height]
 
@@ -85,7 +89,9 @@ def bfsFindClosest(state, start, endP, availP=lambda x, y: True,
                         found.append((x1, y1))
         front = newFront
         pathLen += 1
-        if len(found) > 0:
+        if max_path_len is not None and pathLen > max_path_len:
+            break
+        if max_path_len is None and len(found) > 0:
             break
     if len(found) == 0:
         return None
@@ -132,3 +138,72 @@ def blobSplit(state, blobSize):
                 register=registerCell)
         blobs.append(blob)
     return blobs
+
+
+def bfsFindExt(state, start, endP, availP=None,
+               register=lambda l, x, y: None,
+               wheels = 0,
+               drill = 0):
+    prev = [row[:] for row in [[None] * state.width]
+            * state.height]
+    if availP is None:
+        availP = lambda l, x, y: True
+
+    def physically_available(x, y):
+        return (0 <= x < state.width
+                and 0 <= y < state.height
+                and ((state.cell(x, y)[1] is not Cell.OBSTACLE)
+                   or (drill > 0)))
+
+    def available(l, x, y):
+        return (physically_available(x, y)
+                and prev[y][x] is None
+                and availP(l, x, y)
+                and (x != start[0] or y != start[1]))
+
+    front = [start]
+    (endX, endY) = (-1, -1)
+
+    def find():
+        nonlocal front, endX, endY, wheels, drill
+        pathLen = 1
+        while len(front) != 0:
+            # print('Front = ', front)
+            newFront = []
+            for (x, y) in front:
+                for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    x1 = x + dx
+                    y1 = y + dy                                        
+                    if (wheels > 0
+                        and physically_available(x1, y1)
+                        and physically_available(x1+dx, y1+dy)):
+                        x1 += dx
+                        y1 += dy                        
+                    if available(pathLen, x1, y1):
+                        # print('avail ', (x1, y1))
+                        newFront.append((x1, y1))
+                        prev[y1][x1] = (x, y)
+                        register(pathLen, x1, y1)
+                        if endP(pathLen, x1, y1):
+                            (endX, endY) = (x1, y1)
+                            return
+            if wheels > 0:
+                wheels -= 1
+            if drill > 0:
+                drill -= 1
+            front = newFront
+            pathLen += 1
+
+    find()
+    if endX == -1:
+        return None
+    (curX, curY) = (endX, endY)
+    path = [(endX, endY)]
+    while True:
+        prevPos = prev[curY][curX]
+        if prevPos is None:
+            break
+        path.append(prevPos)
+        (curX, curY) = prevPos
+    path.reverse()
+    return path
