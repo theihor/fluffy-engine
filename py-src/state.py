@@ -73,7 +73,7 @@ class State(object):
             Booster.MANIPULATOR: 0,
             Booster.MYSTERIOUS: 0,
             Booster.TELEPORT: 0,
-            Booster.CLONE: 0
+            Booster.CLONE: 0,
         }
         self.createCells(contour)
         for obstacle in obstacles:
@@ -219,9 +219,9 @@ class State(object):
                 action.process(self, bot)
                 bot.process(self)
                 bot.tickTime()
-            else:
-                raise RuntimeError("Invalid command {} at {} step"
-                                   .format(action, len(bot.actions)))
+             else:
+                 raise RuntimeError("Invalid command {} at {} step"
+                                    .format(action, len(bot.actions)))
         self.repaint()
 
     def nextAction(self, action):
@@ -233,6 +233,7 @@ class State(object):
     def repaint(self):
         for bot in self.bots:
             bot.repaint(self)
+            self.cells[bot.pos[1]][bot.pos[0]] = (None, Cell.CLEAN)
 
     def removeBooster(self, pos: tuple):
         self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)

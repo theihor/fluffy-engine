@@ -1,18 +1,20 @@
 from constants import Cell
 
 
-def bfsFind(state, start, endP, availP=lambda x, y: True,
+def bfsFind(state, start, endP, availP=None,
             register=lambda l, x, y: None):
     prev = [row[:] for row in [[None] * state.width]
             * state.height]
+    if availP is None:
+        availP = lambda l, x, y: state.cell(x, y)[1] is not Cell.OBSTACLE
 
-    def available(x, y):
-        return (x >= 0 and x < state.width
-                and y >= 0 and y < state.height
-                and state.cell(x, y)[1] is not Cell.OBSTACLE
+    def available(l, x, y):
+        return (0 <= x < state.width
+                and 0 <= y < state.height
                 and prev[y][x] is None
-                and availP(x, y)
+                and availP(l, x, y)
                 and (x != start[0] or y != start[1]))
+
     front = [start]
     (endX, endY) = (-1, -1)
 
@@ -26,7 +28,7 @@ def bfsFind(state, start, endP, availP=lambda x, y: True,
                 for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                     x1 = x + dx
                     y1 = y + dy
-                    if available(x1, y1):
+                    if available(pathLen, x1, y1):
                         # print('avail ', (x1, y1))
                         newFront.append((x1, y1))
                         prev[y1][x1] = (x, y)
@@ -36,6 +38,7 @@ def bfsFind(state, start, endP, availP=lambda x, y: True,
                             return
             front = newFront
             pathLen += 1
+
     find()
     if endX == -1:
         return None
@@ -63,6 +66,7 @@ def bfsFindClosest(state, start, endP, availP=lambda x, y: True,
                 and prev[y][x] is None
                 and availP(x, y)
                 and (x != start[0] or y != start[1]))
+
     front = [start]
     pathLen = 1
     found = []
@@ -121,9 +125,10 @@ def blobSplit(state, blobSize):
         def registerCell(l, x, y):
             filled[y][x] = True
             blob.add((x, y))
+
         bfsFind(state, start,
                 endP=lambda l, x, y: len(blob) >= blobSize,
-                availP=lambda x, y: not filled[y][x],
+                availP=lambda l, x, y: not filled[y][x],
                 register=registerCell)
         blobs.append(blob)
     return blobs
