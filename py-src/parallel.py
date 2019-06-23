@@ -1,6 +1,7 @@
 import random
 
 import pathfinder
+import solver
 from actions import *
 from predicates import *
 from solver import selectCommand, moveCommand
@@ -74,7 +75,7 @@ def parallelRotSolver(st, bot_num):
     path = pathfinder.bfsFind(st, bot.pos,
                               parallelP(st, aimed),
                               availP=drillableP(st, bot))
-    # if st.boosters[Booster.DRILL] > 0 and bot.drill_duration <= 0:
+    # if AttachDrill().validate(st, bot):
     #     path2 = pathfinder.bfsFind(st, bot.pos,
     #                                wrapP(st),
     #                                availP=withDrillP(st))
@@ -119,8 +120,25 @@ def drunkMasters(st):
             if len(x) == 0:
                 useBooster(st, bot_num)
                 if bot_num > 0 or not collectBoosters(st, bot_num):
-                    parallelRotSolver(st, bot_num)
+                    assert parallelRotSolver(st, bot_num)
             bot_num += 1
         if all([len(x) == 0 for x in actions]):
             break
+    while st.clean_left_f() != 0:
+        print("{}: {}".format(step, st.clean_left))
+        if all([len(x) > 0 for x in actions]):
+            st.nextActions([x[0] for x in actions])
+            step += 1
+            for i in range(0, len(actions)):
+                actions[i] = actions[i][1:]
+        # TODO (fix for parallel)
+        # bot_num = 0
+        # for x in actions:
+        #     if len(x) == 0:
+        #         if not parallelRotSolver(st, bot_num):
+        #             st.show()
+        #             assert False
+        #     bot_num += 1
+        solver.closestRotSolver(st, 0)
+    assert st.clean_left_f() == 0
     return st
