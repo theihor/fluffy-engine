@@ -6,6 +6,7 @@ DRILL_DURATION = 30
 WHEELS_DURATION = 50
 STRICT_VALIDATION = False
 ATTACHER = SimpleAttacher()
+TURN_BOT = False
 WHEELS_PROC = 0.15
 DRILL_PROC = 1
 
@@ -21,3 +22,5 @@ class Booster(Enum):
     DRILL = auto()
     MANIPULATOR = auto()
     MYSTERIOUS = auto()
+    TELEPORT = auto()
+    CLONE = auto()
