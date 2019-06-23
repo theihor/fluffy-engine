@@ -82,6 +82,28 @@ class State(object):
         self.addBoosters(boosters)
         self.tickNum = 0
         self.repaint()
+        self.save_log = False
+        self.pods = set()
+
+    def set_save_log(self):
+        self.save_log = True
+        self.cells_log = [row[:] for row in [[None] * self.width]
+                          * self.height]
+        self.bots = list(map(lambda b: Bot(b.pos, save_log=True), self.bots))
+
+    def add_log(self, bot_num, action):
+        bot = self.bots[bot_num]
+        bot.log_action(action)
+        (x, y) = bot.pos
+        log = self.cells_log[y][x]
+        if log is None:
+            log = {}
+            self.cells_log[y][x] = log
+        botLog = log.get(bot_num)
+        if botLog is None:
+            botLog = []
+            log[bot_num] = botLog
+        botLog.append(len(bot.log) - 1)
 
     def addBoosters(self, boosters):
         for booster in boosters:
@@ -202,10 +224,13 @@ class State(object):
         return True
 
     def paintCell(self, x, y):
+        num_painted = 0
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
             if cell[1] == Cell.ROT and self.visible((x, y)):
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
+                num_painted = 1
+        return num_painted
 
     def tryPaintCellWith(self, bx, by, x, y, func):
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -214,12 +239,16 @@ class State(object):
                 func(x, y)
 
     def nextActions(self, actions):
-        for (bot, action) in zip(self.bots, actions):
+        for (bot, action, bot_ind) in zip(self.bots, actions, range(len(self.bots))):
             if action.validate(self, bot):
                 bot.actions.append(action)
                 action.process(self, bot)
                 bot.process(self)
                 bot.tickTime()
+                if self.save_log:
+                    self.add_log(bot_ind, action)
+                    bot.last_clean_num = 0
+                    bot.last_booster = None
             else:
                 raise RuntimeError("Invalid command {} at {} step"
                                    .format(action, len(bot.actions)))

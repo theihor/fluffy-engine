@@ -1,8 +1,20 @@
-from constants import STRICT_VALIDATION, Booster
+from constants import STRICT_VALIDATION, Booster, Direction
+
+
+class LoggedAction:
+    def __init__(self, bot, action, direction):
+        self.pos = bot.pos
+        self.manip_num = len(bot.manipulators)
+        self.wheel_duration = bot.wheel_duration
+        self.drill_duration = bot.drill_duration
+        self.action = action
+        self.direction = direction
+        self.num_cleaned = bot.last_clean_num
+        self.picked_booster = bot.last_booster
 
 
 class Bot:
-    def __init__(self, pos: tuple):
+    def __init__(self, pos: tuple, save_log=False):
         self.pos = pos
         self.manipulators = [
             (1, 0),
@@ -12,6 +24,11 @@ class Bot:
         self.wheel_duration = 0
         self.drill_duration = 0
         self.actions = []
+        self.save_log = save_log
+        if self.save_log:
+            self.log = []
+            self.last_clean_num = 0
+            self.last_booster = None
 
     def is_attachable(self, x: int, y: int):
         coords = self.manipulators + [(0, 0)]
@@ -44,14 +61,20 @@ class Bot:
         if bot_cell[0] is not None:
             state.removeBooster(self.pos)
             state.boosters[bot_cell[0]] += 1
+        if self.save_log:
+            if self.last_booster is None:
+                self.last_booster = bot_cell[0]
         self.repaint(state)
 
     def repaint(self, state):
         def real(pos):
             return pos[0] + self.pos[0], pos[1] + self.pos[1]
         coords = [real(pos) for pos in self.manipulators] + [self.pos]
+        num_painted = 0
         for pos in coords:
-            state.paintCell(pos[0], pos[1])
+            num_painted += state.paintCell(pos[0], pos[1])
+        if self.save_log:
+            self.last_clean_num += num_painted
 
     def repaintWith(self, fromPos, state, func):
         def real(pos):
@@ -65,3 +88,7 @@ class Bot:
             self.wheel_duration -= 1
         if self.drill_duration > 0:
             self.drill_duration -= 1
+
+    def log_action(self, action):
+        logged = LoggedAction(self, action, Direction.RIGHT)
+        self.log.append(logged)
