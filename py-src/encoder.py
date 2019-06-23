@@ -8,10 +8,14 @@ class Encoder:
         file.close()
 
 
-def encode_generated_map(filename, coords, start_pos):
+def encode_generated_map(filename, coords, start_pos, boosters):
     with open(filename, 'w') as f:
         for c in coords[:-1]:
             f.write("("+str(c[0]) + "," + str(c[1])+"),")
         f.write("(" + str(coords[len(coords)-1][0]) + "," + str(coords[len(coords)-1][1]) + ")#")
-        f.write(str(start_pos))
+        f.write("("+str(start_pos[0]) + "," + str(start_pos[1])+")")
         f.write("##")
+        sep = ''
+        for (code, (x, y)) in boosters:
+            f.write("{}{}({},{})".format(sep, code, x, y))
+            sep = ';'
