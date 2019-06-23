@@ -7,7 +7,15 @@ class Encoder:
         for actions in state.actions():
                 for action in actions:
                     file.write(str(action))
-            file.close()
+        file.close()
+
+    @staticmethod
+    def encode_action_lists(filename, lists, ticknum):
+        file = open(filename + "." + str(ticknum), "w")
+        for actions in lists:
+            for action in actions:
+                file.write(str(action))
+        file.close()
 
 
 def encode_generated_map(filename, coords, start_pos):
@@ -17,3 +25,5 @@ def encode_generated_map(filename, coords, start_pos):
         f.write("(" + str(coords[len(coords)-1][0]) + "," + str(coords[len(coords)-1][1]) + ")#")
         f.write(str(start_pos))
         f.write("##")
+
+

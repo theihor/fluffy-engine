@@ -18,7 +18,7 @@ class GoToClosestRot(SimpleAction):
         super().__init__("G")
 
     def validate(self, state: State, bot):
-        return bot.wheel_duration <= 0
+        return True
 
     def process(self, state: State, bot):
         super().process(state, bot)
@@ -213,13 +213,17 @@ def learning_run1(state, random_start=False):
     steps_from_last_positive_r = 0
 
     def next_path():
-        if bot.drill_duration > 3:
-            return pathfinder.bfsFind(state, bot.pos,
-                                  lambda l, x, y: state.cell(x, y)[1] == Cell.ROT,
-                                  availP=drillableP(state, bot))
-        else:
-            return pathfinder.bfsFind(state, bot.pos,
-                                      lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
+        return pathfinder.bfsFindExt(state, bot.pos,
+                                     lambda l, x, y: state.cell(x, y)[1] == Cell.ROT,
+                                     wheels=bot.wheel_duration,
+                                     drill=bot.drill_duration)
+        # if bot.drill_duration > 3:
+        #     return pathfinder.bfsFind(state, bot.pos,
+        #                           lambda l, x, y: state.cell(x, y)[1] == Cell.ROT,
+        #                           availP=drillableP(state, bot))
+        # else:
+        #     return pathfinder.bfsFind(state, bot.pos,
+        #                               lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
 
     while not state.is_all_clean() and steps < max_steps:
         (a, v, key) = q_action(state, bot)
@@ -271,7 +275,7 @@ def learning_run1(state, random_start=False):
     else: return action_list
 
 
-iterations = 10
+iterations = 3
 
 task_init_state = None
 saved_task_id = None
@@ -427,7 +431,7 @@ def _main(args):
             else: task_id += str(i)
             al = learn(task_id, qmap_fname)
             print("res for " + str(task_id) + ": " + str(len(al)))
-            encoder.Encoder.encodeToFile("../q-sol/" + task_id + "-" + str(len(al)) + ".sol", [al])
+            encoder.Encoder.encode_action_lists("../q-sol/" + task_id + ".sol", [al], len(al))
     else: print('Not enough arguments')
 
 

@@ -42,6 +42,7 @@ class MoveUp(SimpleAction):
         bot.process(state)
         if bot.wheel_duration > 0 and self.validate(state, bot):
             state.setBotPos(x, y + 2)
+            bot.process(state)
 
 
 class MoveDown(SimpleAction):
@@ -65,6 +66,7 @@ class MoveDown(SimpleAction):
         bot.process(state)
         if bot.wheel_duration > 0 and self.validate(state, bot):
             state.setBotPos(x, y - 2)
+            bot.process(state)
 
 
 class MoveLeft(SimpleAction):
@@ -88,6 +90,7 @@ class MoveLeft(SimpleAction):
         bot.process(state)
         if bot.wheel_duration > 0 and self.validate(state, bot):
             state.setBotPos(x - 2, y)
+            bot.process(state)
 
 
 class MoveRight(SimpleAction):
@@ -111,6 +114,7 @@ class MoveRight(SimpleAction):
         bot.process(state)
         if bot.wheel_duration > 0 and self.validate(state, bot):
             state.setBotPos(x + 2, y)
+            bot.process(state)
 
 
 class DoNothing(SimpleAction):
