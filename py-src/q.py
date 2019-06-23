@@ -1,7 +1,6 @@
 import pathfinder
 from constants import Direction
 from solver import moveCommand
-from state import *
 from actions import *
 import random
 import decode
@@ -10,6 +9,7 @@ import copy
 import os
 import pickle
 from filelock import FileLock
+import sys
 
 
 class GoToClosestRot(SimpleAction):
@@ -28,8 +28,8 @@ qmap = {}
 
 all_actions = [MoveDown(), MoveUp(), MoveLeft(), MoveRight(), TurnLeft(), TurnRight(), GoToClosestRot()]
 
-epsilon = 0.005
-alpha = 0.05 # learning rate
+epsilon = 0.001
+alpha = 0.01 # learning rate
 gamma = 0.95  # discount factor
 
 
@@ -162,7 +162,7 @@ def learning_run1(state, random_start=False):
     if random_start: return False
     else: return action_list
 
-iterations = 30
+iterations = 100
 
 state = None
 id = None
@@ -189,8 +189,9 @@ def learn(task_id):
     dumped_qmap_name = "../qmaps/main_qmap.pickle"
 
     if os.path.isfile(dumped_qmap_name):
-        with open(dumped_qmap_name, "rb") as f:
-            qmap = pickle.load(f)
+        with FileLock("../qmaps/.lock"):
+            with open(dumped_qmap_name, 'rb') as f:
+                qmap = pickle.load(f)
 
     best_sol = learning_run1(get_state(task_id), random_start=False)
 
@@ -206,8 +207,9 @@ def learn(task_id):
             best_sol = sol
             best_len = len(sol)
     #print(qmap)
-    with open(dumped_qmap_name, "wb") as f:
-        pickle.dump(qmap, f)
+    with FileLock("../qmaps/.lock"):
+        with open(dumped_qmap_name, "wb") as f:
+            pickle.dump(qmap, f)
     # with open(dumped_qmap_name, "rb") as f:
     #     qmap1 = pickle.load(f)
     #     for key in qmap:
@@ -215,12 +217,18 @@ def learn(task_id):
     #             raise RuntimeError("BAD DUMP")
     return best_sol
 
-for i in range(1, 301):
-    task_id = "prob-"
-    if i < 10: task_id += "00" + str(i)
-    elif i < 100: task_id += "0" + str(i)
-    else: task_id += str(i)
-    al = learn(task_id)
-    print("res for " + str(task_id) + ": " + str(len(al)))
-    encoder.Encoder.encodeToFile("../q-sol/" + task_id + "-" + str(len(al)) + ".sol", [al])
+args = sys.argv[1:]
+
+if args and len(args) >= 2:
+    k1 = int(args[0])
+    k2 = int(args[1])
+
+    for i in range(k1, k2):
+        task_id = "prob-"
+        if i < 10: task_id += "00" + str(i)
+        elif i < 100: task_id += "0" + str(i)
+        else: task_id += str(i)
+        al = learn(task_id)
+        print("res for " + str(task_id) + ": " + str(len(al)))
+        encoder.Encoder.encodeToFile("../q-sol/" + task_id + "-" + str(len(al)) + ".sol", [al])
 
