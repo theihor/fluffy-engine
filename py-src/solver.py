@@ -99,6 +99,7 @@ def closestRotSolver(st):
                                        wrapP(st),
                                        availP=withDrillP(st))
             if len(path2) < len(path):
+                print("Attach DRILL at " + str(len(bot.actions)))
                 st.nextAction(AttachDrill())
                 path = path2
         if path is None:

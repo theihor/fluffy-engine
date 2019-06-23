@@ -100,13 +100,14 @@ forward = [
 
 class ExperimentalAttacher:
     cnt = 0
+    default = SimpleAttacher()
 
     def __init__(self, positions):
         self.positions = positions
 
     def get_position(self, bot):
         if self.cnt >= len(self.positions):
-            raise RuntimeError("Not enough positions hardcoded :(")
+            return self.default.get_position(bot)
         pos = self.positions[self.cnt]
         self.cnt += 1
         turns = 0
