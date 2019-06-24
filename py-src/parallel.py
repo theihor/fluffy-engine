@@ -114,7 +114,15 @@ def drunkMasters(st):
                 aimed += [(-1, -1)]
                 collectBoosters(st, len(st.bots) - 1, usableP)
             for i in range(0, len(actions)):
-                actions[i] = actions[i][1:]
+                if len(actions[i]) <= 0:
+                    continue
+                last_com: SimpleAction = actions[i][-1]
+                if not last_com.booster_action() and st.cells[aimed[i][1]][aimed[i][0]][1] == Cell.CLEAN:
+                    actions[i] = []
+                elif isinstance(last_com, CloneAction) and not last_com.validate(st, st.bots[i]):
+                    actions[i] = []
+                else:
+                    actions[i] = actions[i][1:]
         bot_num = 0
         for x in actions:
             if len(x) == 0:
