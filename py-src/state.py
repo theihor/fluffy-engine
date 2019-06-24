@@ -264,7 +264,7 @@ class State(object):
                     bot.last_clean_num = 0
                     bot.last_booster = None
             else:
-                Encoder.encodeToFile("../fail.sol", [bot.actions])
+                #Encoder.encodeToFile("../fail.sol", [bot.actions])
                 raise RuntimeError("Invalid command {} at {} step"
                                    .format(action, len(bot.actions)))
             self.tickNum += 1

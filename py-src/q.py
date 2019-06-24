@@ -18,7 +18,8 @@ class GoToClosestRot(SimpleAction):
         super().__init__("G")
 
     def validate(self, state: State, bot):
-        return True
+        k = get_key(state, bot, self)
+        return 'r' not in k
 
     def process(self, state: State, bot):
         super().process(state, bot)
@@ -70,7 +71,7 @@ def all_actions(bot):
 
 
 epsilon = 0.001
-alpha = 0.02 # learning rate
+alpha = 0.008 # learning rate
 gamma = 0.95  # discount factor
 
 
@@ -79,28 +80,28 @@ def state_key(state):
     bot = state.bots[0]
     (bx, by) = bot.pos
     arr = []
-    ms = [(bx + x, by + y) for (x, y) in bot.manipulators] + [(bx, by)]
+    #ms = [(bx + x, by + y) for (x, y) in bot.manipulators] + [(bx, by)]
 
     xl = []; yl = []
     outer_x = True
     if bot.direction == Direction.RIGHT:
-        xl = list(range(bx - 1, bx + 3))
+        xl = list(range(bx - 2, bx + 4))
         xl.reverse()
-        yl = list(range(by - 2, by + 3))
+        yl = list(range(by - 3, by + 4))
         yl.reverse()
         outer_x = True
     elif bot.direction == Direction.DOWN:
-        xl = list(range(bx - 2, bx + 3))
+        xl = list(range(bx - 3, bx + 4))
         xl.reverse()
-        yl = list(range(by - 1, by + 3))
+        yl = list(range(by - 2, by + 4))
         outer_x = False
     elif bot.direction == Direction.LEFT:
-        xl = list(range(bx - 1, bx + 3))
-        yl = list(range(by - 2, by + 3))
+        xl = list(range(bx - 2, bx + 4))
+        yl = list(range(by - 3, by + 4))
         outer_x = True
     else:
-        xl = list(range(bx - 2, bx + 3))
-        yl = list(range(by - 1, by + 3))
+        xl = list(range(bx - 3, bx + 4))
+        yl = list(range(by - 2, by + 4))
         yl.reverse()
         outer_x = False
 
@@ -108,7 +109,10 @@ def state_key(state):
         if 0 <= x < state.width and 0 <= y < state.height:
             (_, c) = state.cell(x, y)
             if c == Cell.ROT:
-                arr.append('r')
+                if state.visible((x, y)):
+                    arr.append('r')
+                else:
+                    arr.append('i')
             else:
                 arr.append('c')  # clean
         else:
@@ -117,14 +121,14 @@ def state_key(state):
     if outer_x:
         for x in xl:
             for y in yl:
-                if not (x, y) in ms: process_p(x, y)
+                process_p(x, y)
     else:
         for y in yl:
             for x in xl:
-                if not (x, y) in ms: process_p(x, y)
+                process_p(x, y)
 
     key = ''.join(arr)
-    if len(xl) * len(yl) != 20:
+    if len(xl) * len(yl) != 42:
         print(str(len(xl)) + " x " + str(len(yl)))
         print(key)
     return key
@@ -214,6 +218,11 @@ def learning_run1(state, random_start=False):
             action_list.append(a)
             state.nextAction(a)
 
+    for i in range(state.boosters[Booster.MANIPULATOR]):
+        a = AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot))
+        if a.validate(state, bot):
+            action_list.append(a)
+            state.nextAction(a)
 
     # if random_start:
     #     start_pos = None
@@ -311,16 +320,12 @@ def get_state(task_id):
 
 
 def learn(task_id, qmap_fname):
-    global qmap
 
-    if os.path.isfile(qmap_fname):
-        with FileLock("../qmaps/.lock"):
-            with open(qmap_fname, 'rb') as f:
-                qmap = pickle.load(f)
 
-    (best_sol, s) = learning_run1(get_state(task_id), random_start=False)
-    iterations = 2000 // s.width
-    if not best_sol: return
+    best_sol = None
+    while not best_sol:
+        (best_sol, s) = learning_run1(get_state(task_id), random_start=False)
+    iterations = 500 // s.width
 
     best_len = len(best_sol)
 
@@ -338,9 +343,8 @@ def learn(task_id, qmap_fname):
             best_sol = sol
             best_len = len(sol)
 
-    with FileLock("../qmaps/.lock"):
-        with open(qmap_fname, "wb") as f:
-            pickle.dump(qmap, f)
+    with open(qmap_fname, "wb") as f:
+        pickle.dump(qmap, f)
 
     #print(qmap)
     # with open(dumped_qmap_name, "rb") as f:
@@ -371,7 +375,10 @@ def run_qbot(state, qmap_fname):
 
     global epsilon
     epsilon = 0  # no exploration
-    (_, final_state) = learning_run1(state)
+    res = None
+    while not res:
+        (res, final_state) = learning_run1(state)
+
     print(final_state.tickNum)
     return final_state
 
@@ -416,6 +423,12 @@ def _main(args):
         k1 = int(args[0])
         k2 = int(args[1])
         qmap_fname = args[2]
+
+        global qmap
+
+        if os.path.isfile(qmap_fname):
+            with open(qmap_fname, 'rb') as f:
+                qmap = pickle.load(f)
 
         for i in range(k1, k2):
             task_id = "prob-"

@@ -20,8 +20,8 @@ for sol in ./sol/prob-*.sol.*; do
 	    echo "${base} is better then ${best_file}."
 	    rm -f "$best_file"
 	    cp "$sol" ./best-sol
-	#else
-	    #echo "!!! Old result is better."
+	else
+	    echo "!!! Old result is better."
 	fi
     fi
 done
