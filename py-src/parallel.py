@@ -120,7 +120,7 @@ def drunkMasters(st):
             if len(x) == 0:
                 useBooster(st, bot_num)
                 if bot_num > 0 or not collectBoosters(st, bot_num):
-                    assert parallelRotSolver(st, bot_num)
+                    parallelRotSolver(st, bot_num)
             bot_num += 1
         if all([len(x) == 0 for x in actions]):
             break
