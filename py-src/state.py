@@ -293,7 +293,7 @@ class State(object):
             self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
 
     def is_cleaned(self):
-        return self.clean_left == 0
+        return self.clean_left <= 0
 
     def show(self):
         for y in reversed(range(self.height)):
