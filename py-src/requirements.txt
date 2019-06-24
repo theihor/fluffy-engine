@@ -1,3 +1,4 @@
 parsec
 svgwrite
-tsp_solver2
+postman_problems
+networkx

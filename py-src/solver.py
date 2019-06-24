@@ -7,10 +7,13 @@ from actions import *
 import pathfinder
 import svgwrite
 import svg_colors
-import tsp_solver.greedy as tsp
 from predicates import *
 import copy
 from optimizer import optimize, optimize_small_clean, optimize_long_moves, optimize_teleports
+import networkx as nx
+import postman_problems
+import csv
+import tempfile
 
 
 def solve(taskFile, solutionFile, solver):
@@ -270,7 +273,7 @@ def split_into_regions(st):
                 continue
             if ids_yx[y-1][x] != 0:
                 ids_yx[y][x] = ids_yx[y-1][x]
-                
+
         # second pass, propagate id to the right
         for x in range(st.width):
             if is_obstacle(x, y):
@@ -280,7 +283,7 @@ def split_into_regions(st):
 
             if ids_yx[y][x-1] != 0 and ids_yx[y][x] == 0:
                 ids_yx[y][x] = ids_yx[y][x-1]
-                
+
         # second and a half pass, break propagation to the right after obstacle
         last_id_before_obstacle = 0
         replacement_id = None
@@ -344,13 +347,19 @@ def make_region_neighbours_map(ids_yx):
     id_to_neighbours_map = {}
 
     def ensure_set(a):
+        if a == 0:
+            return
         if not a in id_to_neighbours_map:
             id_to_neighbours_map[a] = set()
-    
+
     def link(a, b):
+        if a == 0:
+            return
+        if b == 0:
+            return
         id_to_neighbours_map[a].add(b)
         id_to_neighbours_map[b].add(a)
-    
+
     h = len(ids_yx)
     w = len(ids_yx[0])
     for y in range(h):
@@ -361,44 +370,33 @@ def make_region_neighbours_map(ids_yx):
 
     return id_to_neighbours_map
 
-            
+
 def make_traversal_plan(region_ids_yx, initial_id):
     id_to_neighbours_map = make_region_neighbours_map(region_ids_yx)
-    max_id = 0
-    for row in region_ids_yx:
-        for _id in row:
-            if _id > max_id:
-                max_id = _id
-    
-    # TODO: try using this library instead:
-    #       https://github.com/jvkersch/pyconcorde
-    unreachable = 1000
-    distance_half_matrix = []
-    for a in range(1, max_id+1):
-        row = []
-        for b in range(1, a):
-            if b in id_to_neighbours_map[a]:
-                row.append(1)
-            else:
-                row.append(unreachable)
-        
-        distance_half_matrix.append(row)
-    last_row = [unreachable] * (max_id)
-    
-    distance_half_matrix.append(last_row)
 
-    true_initial_id = initial_id - 1
+    G = nx.Graph()
 
-    path = tsp.solve_tsp(
-        distance_half_matrix,
-        optim_steps=10,
-        endpoints=(initial_id - 1, max_id)
-    )
-    path.pop()
-    
-    return list(map(lambda x: x+1, path))
+    for a, links in id_to_neighbours_map.items():
+        for b in links:
+            G.add_edge(a, b, weight=1)
 
-            
+    G_min = nx.algorithms.minimum_spanning_tree(G)
+
+    with tempfile.NamedTemporaryFile(mode="w") as edges_csv:
+        w = csv.writer(edges_csv)
+        w.writerow(["node1", "node2", "trail", "distance"])
+        i = 0
+        for a, b in G_min.edges():
+            w.writerow([str(a), str(b), str(i), 1])
+            i += 1
+        edges_csv.flush()
+
+        tour, _ = postman_problems.solver.cpp(edges_csv.name,
+                                              start_node=str(initial_id))
+
+    return list(map(lambda x: int(x[0]), tour))
+
+
 def draw_regions(st, ids_yx, traversal_plan, svg_file):
     svg = svgwrite.Drawing(filename=svg_file)
     svg.viewbox(minx=0, miny=0, width=st.width*5, height=st.height*5)
@@ -411,7 +409,7 @@ def draw_regions(st, ids_yx, traversal_plan, svg_file):
         return color
 
     id_to_coord = {}
-    
+
     for y in range(st.height):
         for x in range(st.width):
             color = "white"
@@ -424,7 +422,7 @@ def draw_regions(st, ids_yx, traversal_plan, svg_file):
                 color = id_color(cell_id)
                 if cell_id not in id_to_coord:
                     id_to_coord[cell_id] = (x*5+2,y*5+2)
-                
+
             svg.add(svg.rect(
                 insert=(x*5, y*5),
                 size=(5,5),
@@ -435,14 +433,16 @@ def draw_regions(st, ids_yx, traversal_plan, svg_file):
             if cell_id != 0:
                 svg.add(svg.text(str(cell_id), insert=(x*5+1, y*5+4), font_size=3))
 
+    traversal_coords = list(map(lambda x: id_to_coord[x], traversal_plan))
+
     svg_traversal_line = svg.polyline(
-        points=map(lambda x: id_to_coord[x], traversal_plan),
+        points=traversal_coords,
         stroke="red",
         stroke_width="1",
         fill_opacity="0"
     )
     svg.add(svg_traversal_line)
-            
+
     svg.save()
 
 def draw_regions_for_task(task_file, svg_file):
@@ -451,6 +451,7 @@ def draw_regions_for_task(task_file, svg_file):
     ids_yx = split_into_regions(st)
     initial_id = ids_yx[bot_pos[1]][bot_pos[0]]
     traversal_plan = make_traversal_plan(ids_yx, initial_id)
+    print(list(traversal_plan))
     draw_regions(st, ids_yx, traversal_plan, svg_file)
 
 def ids_yx_to_blobs_map(ids_yx):
@@ -466,7 +467,7 @@ def ids_yx_to_blobs_map(ids_yx):
                 id_to_blob[_id].add((x,y))
     return id_to_blob
 
-
+# This should be A* or some pre-computed routing!!
 def move_to_blob(st, blob):
     path = pathfinder.bfsFindClosest(
         st,
@@ -480,30 +481,33 @@ def move_to_blob(st, blob):
 
 def solve_with_regions(st):
     bot = st.bots[0]
-    collectBoosters(st, bot)
+    collectBoosters(st, 0)
     curPos = st.botPos()
-    
+
     ids_yx = split_into_regions(st)
     id_to_blob = ids_yx_to_blobs_map(ids_yx)
     initial_id = ids_yx[curPos[1]][curPos[0]]
     assert initial_id != 0
     plan = make_traversal_plan(ids_yx, initial_id)
-    
+    visited = set()
+
     for blob_id in plan:
         blob = id_to_blob[blob_id]
         assert blob
         curPos = move_to_blob(st, blob)
-        while True:
-            nextPos = closestRotInBlob(st, blob, {})
-            if nextPos is None:
-                break
-    return st.actions()
+        if blob not in visited:
+            visited.add(blob_id)
+            while True:
+                nextPos = closestRotInBlob(st, blob, {})
+                if nextPos is None:
+                    break
+    return st
 
-    
+
 # draw_regions_for_task(
 #     "/home/eddy/prog/fluffy-engine/desc/prob-150.desc",
 #     "/home/eddy/tmp/1.svg")
 
-# solve('/home/eddy/prog/fluffy-engine/desc/prob-150.desc',
-#       '/home/eddy/tmp/1.sol',
-#       solve_with_regions)
+solve('/home/eddy/prog/fluffy-engine/desc/prob-150.desc',
+      '/home/eddy/tmp/1.sol',
+      solve_with_regions)
