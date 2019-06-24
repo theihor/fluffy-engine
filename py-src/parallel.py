@@ -105,7 +105,7 @@ def drunkMasters(st):
         if all([len(x) > 0 for x in actions]):
             st.nextActions([x[0] for x in actions])
             print("{}: {}".format(step, st.clean_left))
-            # if step == 11486:
+            # if step == 829:
             #     break
             step += 1
             if len(st.bots) > len(actions):
@@ -120,10 +120,12 @@ def drunkMasters(st):
             if len(x) == 0:
                 useBooster(st, bot_num)
                 if bot_num > 0 or not collectBoosters(st, bot_num):
-                    parallelRotSolver(st, bot_num)
+                    if not parallelRotSolver(st, bot_num):
+                        actions[bot_num].append(DoNothing())
             bot_num += 1
         if all([len(x) == 0 for x in actions]):
             break
+
     while st.clean_left_f() != 0:
         print("{}: {}".format(step, st.clean_left))
         if all([len(x) > 0 for x in actions]):
