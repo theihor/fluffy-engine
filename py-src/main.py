@@ -1,4 +1,5 @@
 import sys
+import parallel
 import solver
 import q
 
@@ -6,7 +7,7 @@ import q
 def main():
     desc = sys.argv[1]
     sol = sys.argv[2]
-    solver.solve(desc, sol, solver.closestRotSolver)
+    solver.solve(desc, sol, parallel.drunkMasters)
 
 
 def qmain():

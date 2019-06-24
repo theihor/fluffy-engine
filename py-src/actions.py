@@ -1,3 +1,4 @@
+from bot import Bot
 from constants import DRILL_DURATION, WHEELS_DURATION, STRICT_VALIDATION
 from state import State, Cell, Booster
 
@@ -44,10 +45,10 @@ class MoveUp(SimpleAction):
     def process(self, state: State, bot):
         super().process(state, bot)
         (x, y) = bot.pos
-        state.setBotPos(x, y + 1)
+        bot.pos = (x, y + 1)
         bot.process(state)
         if bot.wheel_duration > 0 and self.validate(state, bot):
-            state.setBotPos(x, y + 2)
+            bot.pos = (x, y + 2)
             bot.process(state)
 
 
@@ -75,10 +76,10 @@ class MoveDown(SimpleAction):
     def process(self, state: State, bot):
         super().process(state, bot)
         (x, y) = bot.pos
-        state.setBotPos(x, y - 1)
+        bot.pos = (x, y - 1)
         bot.process(state)
         if bot.wheel_duration > 0 and self.validate(state, bot):
-            state.setBotPos(x, y - 2)
+            bot.pos = (x, y - 2)
             bot.process(state)
 
 
@@ -105,10 +106,10 @@ class MoveLeft(SimpleAction):
     def process(self, state: State, bot):
         super().process(state, bot)
         (x, y) = bot.pos
-        state.setBotPos(x - 1, y)
+        bot.pos = (x - 1, y)
         bot.process(state)
         if bot.wheel_duration > 0 and self.validate(state, bot):
-            state.setBotPos(x - 2, y)
+            bot.pos = (x - 2, y)
             bot.process(state)
 
 
@@ -137,10 +138,10 @@ class MoveRight(SimpleAction):
     def process(self, state: State, bot):
         super().process(state, bot)
         (x, y) = bot.pos
-        state.setBotPos(x + 1, y)
+        bot.pos = (x + 1, y)
         bot.process(state)
         if bot.wheel_duration > 0 and self.validate(state, bot):
-            state.setBotPos(x + 2, y)
+            bot.pos = (x + 2, y)
             bot.process(state)
 
 
@@ -181,6 +182,14 @@ class BoosterAction(SimpleAction):
     def booster_action(self):
         return True
 
+    # def validate(self, state, bot):
+    #     if not super().validate(state, bot):
+    #         return False
+    #     # if state.lockBoosters > 0:
+    #     #     return False
+    #     return True
+
+
 
 class AttachWheels(BoosterAction):
     def __init__(self):
@@ -188,6 +197,7 @@ class AttachWheels(BoosterAction):
 
     def validate(self, state: State, bot):
         return state.boosters[Booster.WHEEL] > 0 and not bot.drill_duration > 0
+        #     return False
 
     def process(self, state: State, bot):
         super().process(state, bot)
@@ -201,6 +211,7 @@ class AttachDrill(BoosterAction):
 
     def validate(self, state: State, bot):
         return state.boosters[Booster.DRILL] > 0 and not bot.wheel_duration > 0
+        #     return False
 
     def process(self, state: State, bot):
         super().process(state, bot)
@@ -213,17 +224,17 @@ class AttachManipulator(BoosterAction):
         (self.x, self.y) = coords
 
     def validate(self, state: State, bot):
-        #print("validating: " + str(self))
+        # if not super().validate(state, bot):
+        #     return False
         if state.boosters[Booster.MANIPULATOR] <= 0:
             return False
         (bx, by) = bot.pos
         (x, y) = (bx + self.x, by + self.y)
         if x < 0 or x >= state.width or y < 0 or y >= state.height:
             return False
-        elif state.cell(x, y)[1] == Cell.OBSTACLE:
+        elif not state.visibleFrom(bx, by, (x, y)):
             return False
-        else:
-            return bot.is_attachable(self.x, self.y)
+        return bot.is_attachable(self.x, self.y)
 
     def process(self, state: State, bot):
         super().process(state, bot)
@@ -263,3 +274,26 @@ class Shift(BoosterAction):
 
     def __str__(self):
         return "T({},{})".format(self.pos[0], self.pos[1])
+
+
+class CloneAction(BoosterAction):
+    def __init__(self):
+        super().__init__("C")
+        
+    def validate(self, state: State, bot):
+        # if not super().validate(state, bot):
+        #     return False
+        print("validate")
+        if state.boosters[Booster.CLONE] <= 0:
+            print(1)
+            return False
+        if state.cell(*bot.pos)[0] != Booster.MYSTERIOUS:
+            print(str(state.cell(*bot.pos)))
+            return False
+        return True
+    
+    def process(self, state: State, bot):
+        super().process(state, bot)
+        print("CLONE!!!")
+        state.bots.append(Bot(bot.pos))
+        state.boosters[Booster.CLONE] -= 1

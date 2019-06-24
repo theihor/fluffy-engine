@@ -70,6 +70,7 @@ class State(object):
         self.last_painted = 0
         self.total_rot_cells = 0
         # map [booster -> amount]
+        self.lockBoosters = 0
         self.boosters = {
             Booster.DRILL: 0,
             Booster.WHEEL: 0,
@@ -84,9 +85,19 @@ class State(object):
                 self.fillContour(obstacle, (None, Cell.OBSTACLE))
         self.addBoosters(boosters)
         self.tickNum = 0
+        self.clean_left = 0
         self.repaint()
         self.save_log = False
         self.pods = set()
+        self.clean_left_f()
+
+    def clean_left_f(self):
+        self.clean_left = 0
+        for y in self.cells:
+            for x in y:
+                if x[1] == Cell.ROT:
+                    self.clean_left += 1
+        return self.clean_left
 
     def set_save_log(self):
         self.save_log = True
@@ -228,20 +239,20 @@ class State(object):
                     y = y + dy
         return True
 
-    def paintCells(self, coords):
-        for pos in coords:
-            self.paintCell(*pos)
+    def paintCell(self, x, y, bx=None, by=None):
+        if bx is None:
+            (bx, by) = self.botPos()
 
 
-    def paintCell(self, x, y):
         num_painted = 0
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
-            if cell[1] == Cell.ROT and self.visible((x, y)):
+            if cell[1] == Cell.ROT and self.visibleFrom(bx, by, (x, y)):
                 self.last_painted += 1
                 self.total_rot_cells -= 1
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
                 num_painted = 1
+                self.clean_left -= 1
         return num_painted
 
     def tryPaintCellWith(self, bx, by, x, y, func):
@@ -267,7 +278,9 @@ class State(object):
                 #Encoder.encodeToFile("../fail.sol", [bot.actions])
                 raise RuntimeError("Invalid command {} at {} step"
                                    .format(action, len(bot.actions)))
-            self.tickNum += 1
+        self.tickNum += 1
+        if self.lockBoosters > 0:
+            self.lockBoosters -= 1
         self.repaint()
 
     def nextAction(self, action):
@@ -279,13 +292,30 @@ class State(object):
     def repaint(self):
         for bot in self.bots:
             bot.repaint(self)
-            self.cells[bot.pos[1]][bot.pos[0]] = (None, Cell.CLEAN)
+            if self.cell(*bot.pos)[0] != Booster.MYSTERIOUS:
+                self.cells[bot.pos[1]][bot.pos[0]] = (None, Cell.CLEAN)
 
     def removeBooster(self, pos: tuple):
-        self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
+        if self.cell(*pos)[1] == Cell.ROT:
+            self.clean_left -= 1
+        if self.cell(*pos)[0] != Booster.MYSTERIOUS:
+            self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
+            self.lockBoosters = 2
+
+    def is_cleaned(self):
+        return self.clean_left <= 0
 
     def show(self):
-        print_cells(self.cells, self.width, self.height)
+        for y in reversed(range(self.height)):
+            for x in range(self.width):
+                (booster, cell) = self.cells[y][x]
+                ch = '.'
+                if cell is Cell.OBSTACLE:
+                    ch = '#'
+                elif cell is Cell.CLEAN:
+                    ch = 'o'
+                print(ch, end='')
+            print()
 
     def is_all_clean(self):
         for x in range(self.width):
@@ -294,16 +324,3 @@ class State(object):
                     return False
         return True
         #return self.total_rot_cells <= 0
-
-def print_cells(cells, w, h):
-    for y in reversed(range(h)):
-        for x in range(w):
-            (booster, cell) = cells[y][x]
-            ch = '.'
-            if cell is Cell.OBSTACLE:
-                ch = '#'
-            elif cell is Cell.CLEAN:
-                ch = 'o'
-            print(ch, end='')
-        print()
-

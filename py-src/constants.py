@@ -32,12 +32,16 @@ COLLECTABLE = [
     Booster.MANIPULATOR,
     # Booster.TELEPORT,
    # Booster.DRILL,
+    # Booster.CLONE,
+    # Booster.MYSTERIOUS,
 ]
 # paint stage
 USABLE = [
-    # Booster.WHEEL,
-    # Booster.MANIPULATOR,
-    # Booster.DRILL,
+    Booster.WHEEL,
+    Booster.MANIPULATOR,
+    Booster.DRILL,
+    # Booster.CLONE,
+    # Booster.TELEPORT,
 ]
 class Direction(Enum):
     UP = auto()
