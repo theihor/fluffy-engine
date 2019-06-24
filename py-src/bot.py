@@ -63,7 +63,7 @@ class Bot:
         bot_cell = state.cell(self.pos[0], self.pos[1])
         if bot_cell[0] is not None:
             state.removeBooster(self.pos)
-            print('Collected ', state.tickNum, str(bot_cell[0]))
+            #print('Collected ', state.tickNum, str(bot_cell[0]))
             state.boosters[bot_cell[0]] += 1
             # state.lockBoosters = 2
         if self.save_log:

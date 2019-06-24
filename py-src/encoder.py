@@ -1,4 +1,4 @@
-from filelock import FileLock
+
 
 class Encoder:
     @staticmethod
@@ -7,8 +7,8 @@ class Encoder:
         sep = ''
         for actions in state.actions():
             file.write(sep)
-                for action in actions:
-                    file.write(str(action))
+            for action in actions:
+                file.write(str(action))
             sep = '#'
         file.close()
 

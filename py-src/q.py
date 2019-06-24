@@ -9,7 +9,6 @@ import encoder
 import copy
 import os
 import pickle
-from filelock import FileLock
 import sys
 
 
@@ -49,7 +48,7 @@ constant_actions = [
     MoveRight(), # relative to face
     TurnLeft(),
     TurnRight(),
-    GoToClosestRot(),
+    #GoToClosestRot(),
     AttachDrill(),
     AttachWheels(),
     Reset(),
@@ -70,9 +69,9 @@ def all_actions(bot):
     return lst
 
 
-epsilon = 0.001
-alpha = 0.008 # learning rate
-gamma = 0.95  # discount factor
+epsilon = 0.00
+alpha = 0.01 # learning rate
+gamma = 0.98  # discount factor
 
 
 def state_key(state):
@@ -135,12 +134,22 @@ def state_key(state):
 
 
 def get_key(state, bot, action):
+    boosters = []
+    if bot.drill_duration > 0:
+        boosters.append('D')
+    else:
+        boosters.append('d')
+
+    if bot.wheel_duration > 0:
+        boosters.append('W')
+    else:
+        boosters.append('w')
     if isinstance(action, AttachDrill) or\
             isinstance(action, AttachManipulator) or \
             isinstance(action, AttachWheels):
-        return str(action)
+        return ''.join(boosters) + str(action)
     else:
-        return state_key(state) + str(action)
+        return ''.join(boosters) + state_key(state) + str(action)
 
 
 def q_action(state, bot):
@@ -251,50 +260,51 @@ def learning_run1(state, random_start=False):
         #     return pathfinder.bfsFind(state, bot.pos,
         #                               lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
 
+    go = GoToClosestRot()
+
     while not state.is_all_clean() and steps < max_steps:
         #print(steps)
-        (a, v, key) = q_action(state, bot)
-        #print(str(a), end='')
-        r = 0
-        if isinstance(a, GoToClosestRot):
+
+        if go.validate(state, bot):
             path = next_path()
             if path:
                 commands = []
                 for (pos, nextPos) in zip(path, path[1:]):
                     commands.append(moveCommand(pos, nextPos))
-                #print(state.bots[0].pos, path)
-                #print([str(c) for c in commands])
+                # print(state.bots[0].pos, path)
+                # print([str(c) for c in commands])
                 for c in commands:
                     if c.validate(state, state.bots[0]):
                         action_list.append(c)
                         state.nextAction(c)
                         steps += 1
-                        r -= 1
-                        r += state.last_painted
-                        if state.last_painted > 0:
-                            steps_from_last_positive_r = 0
-                        else:
-                            steps_from_last_positive_r += 1
             else:
                 return (None, state)
         else:
+
+            (a, v, key) = q_action(state, bot)
+            #print(str(a), end='')
+            r = 0
             action_list.append(a)
             state.nextAction(a)
             steps += 1
 
-        if state.last_painted > 0:
-            r = state.last_painted
-            steps_from_last_positive_r = 0
-        else:
-            steps_from_last_positive_r += 1
-            r = -1 - (steps_from_last_positive_r / 1e5)
+            if state.last_painted > 0:
+                r = state.last_painted
+                steps_from_last_positive_r = 0
+            else:
+                steps_from_last_positive_r += 1
+                r = -1 - (steps_from_last_positive_r / 1e5)
 
-        # update Q
+            # update Q
 
-        (_, v1, _) = q_action(state, bot)
-        #print("r = " + str(r) + ", q = " + str(qmap[key]), end=" ")
-        qmap[key] += alpha * (r + gamma * v1 - v)
-        #print("q1 = " + str(qmap[key]))
+            (_, v1, _) = q_action(state, bot)
+            #print("r = " + str(r) + ", q = " + str(qmap[key]), end=" ")
+
+            qmap[key] += alpha * (r + gamma * v1 - v)
+            qmap["count of observations"] += 1
+
+            #print("q1 = " + str(qmap[key]))
 
     if random_start: return False
     else: return action_list, state
@@ -321,21 +331,24 @@ def get_state(task_id):
 
 def learn(task_id, qmap_fname):
 
-
     best_sol = None
     while not best_sol:
         (best_sol, s) = learning_run1(get_state(task_id), random_start=False)
-    iterations = 500 // s.width
+    iterations = 1 #// s.width
 
     best_len = len(best_sol)
+    print(str(task_id) + " 0: " + str(best_len))
 
-    for i in range(iterations):
+    for i in range(1, iterations - 1):
         random_start = False
         (sol, _) = learning_run1(get_state(task_id), random_start=random_start)
         if sol is None: continue
 
-        if i % (iterations // 5) == 0:
+        if i % (iterations // 10) == 0:
             print(str(task_id) + " " + str(i) + ": " + str(best_len))
+            with open(qmap_fname, "wb") as f:
+                print("Dumping", qmap_fname, "with ", qmap["count of observations"], "observations")
+                pickle.dump(qmap, f)
 
         if not random_start and best_len >= len(sol):
             if best_len > len(sol):
@@ -343,8 +356,7 @@ def learn(task_id, qmap_fname):
             best_sol = sol
             best_len = len(sol)
 
-    with open(qmap_fname, "wb") as f:
-        pickle.dump(qmap, f)
+
 
     #print(qmap)
     # with open(dumped_qmap_name, "rb") as f:
@@ -429,6 +441,8 @@ def _main(args):
         if os.path.isfile(qmap_fname):
             with open(qmap_fname, 'rb') as f:
                 qmap = pickle.load(f)
+        if "count of observations" not in qmap:
+            qmap["count of observations"] = 0
 
         for i in range(k1, k2):
             task_id = "prob-"
