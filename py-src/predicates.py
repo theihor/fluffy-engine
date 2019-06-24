@@ -6,6 +6,10 @@ def boosterP(st):
     return lambda l, x, y: st.cell(x, y)[0] in COLLECTABLE
 
 
+def cloneP(st):
+    return lambda l, x, y: st.cell(x, y)[0] == Booster.CLONE
+
+
 def usableP(st):
     return lambda l, x, y: st.cell(x, y)[0] is not None
 

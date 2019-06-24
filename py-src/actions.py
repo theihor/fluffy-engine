@@ -143,12 +143,22 @@ class BoosterAction(SimpleAction):
     def booster_action(self):
         return True
 
+    # def validate(self, state, bot):
+    #     if not super().validate(state, bot):
+    #         return False
+    #     # if state.lockBoosters > 0:
+    #     #     return False
+    #     return True
+
+
 
 class AttachWheels(BoosterAction):
     def __init__(self):
         super().__init__("F")
 
     def validate(self, state: State, bot):
+        # if not super().validate(state, bot):
+        #     return False
         return state.boosters[Booster.WHEEL] > 0
 
     def process(self, state: State, bot):
@@ -162,6 +172,8 @@ class AttachDrill(BoosterAction):
         super().__init__("L")
 
     def validate(self, state: State, bot):
+        # if not super().validate(state, bot):
+        #     return False
         return state.boosters[Booster.DRILL] > 0
 
     def process(self, state: State, bot):
@@ -175,13 +187,22 @@ class AttachManipulator(BoosterAction):
         (self.x, self.y) = coords
 
     def validate(self, state: State, bot):
+        # if not super().validate(state, bot):
+        #     return False
         if state.boosters[Booster.MANIPULATOR] <= 0:
+            return False
+        (bx, by) = bot.pos
+        (x, y) = (bx + self.x, by + self.y)
+        if x < 0 or x >= state.width or y < 0 or y >= state.height:
+            return False
+        elif not state.visibleFrom(bx, by, (x, y)):
             return False
         return bot.is_attachable(self.x, self.y)
 
     def process(self, state: State, bot):
         super().process(state, bot)
         bot.attach(self.x, self.y)
+        print("Attach manipulator: ", state.tickNum)
         state.boosters[Booster.MANIPULATOR] -= 1
 
     def __str__(self):
@@ -193,6 +214,8 @@ class Reset(BoosterAction):
         super().__init__("R")
 
     def validate(self, state: State, bot):
+        # if not super().validate(state, bot):
+        #     return False
         return (state.boosters[Booster.TELEPORT] > 0
                 and bot.pos not in state.pods)
 
@@ -219,11 +242,13 @@ class Shift(BoosterAction):
         return "T({},{})".format(self.pos[0], self.pos[1])
 
 
-class CloneAction(SimpleAction):
+class CloneAction(BoosterAction):
     def __init__(self):
         super().__init__("C")
         
     def validate(self, state: State, bot):
+        # if not super().validate(state, bot):
+        #     return False
         print("validate")
         if state.boosters[Booster.CLONE] <= 0:
             print(1)

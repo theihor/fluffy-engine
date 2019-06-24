@@ -60,9 +60,9 @@ class Bot:
         bot_cell = state.cell(self.pos[0], self.pos[1])
         if bot_cell[0] is not None:
             state.removeBooster(self.pos)
-            print('Collected ' + str(bot_cell[0]))
+            print('Collected ', state.tickNum, str(bot_cell[0]))
             state.boosters[bot_cell[0]] += 1
-            state.lockBoosters = 2
+            # state.lockBoosters = 2
         if self.save_log:
             if self.last_booster is None:
                 self.last_booster = bot_cell[0]
@@ -94,3 +94,7 @@ class Bot:
     def log_action(self, action):
         logged = LoggedAction(self, action, Direction.RIGHT)
         self.log.append(logged)
+
+    def addDoNothing(self):
+        from actions import DoNothing
+        self.actions.append(DoNothing())

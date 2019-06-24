@@ -58,6 +58,8 @@ def collectBoosters(st, bot_num, pred=boosterP):
 
 def useBooster(st, bot_num):
     bot = st.bots[bot_num]
+    if st.lockBoosters > 0:
+        return False
     if st.boosters[Booster.MANIPULATOR] > 0:
         command = AttachManipulator(ATTACHER.get_position(bot))
         global actions
@@ -99,7 +101,7 @@ def parallelRotSolver(st, bot_num):
 
 def drunkMasters(st):
     global actions, aimed
-    collectBoosters(st, 0)
+    collectBoosters(st, 0, cloneP)
     step = 0
     while not st.is_cleaned():
         if all([len(x) > 0 for x in actions]):
@@ -109,7 +111,7 @@ def drunkMasters(st):
             #     break
             step += 1
             if len(st.bots) > len(actions):
-                print('Create new actions')
+                #print('Create new actions')
                 actions += [[]]
                 aimed += [(-1, -1)]
                 collectBoosters(st, len(st.bots) - 1, usableP)
@@ -119,14 +121,18 @@ def drunkMasters(st):
                 last_com: SimpleAction = actions[i][-1]
                 if not last_com.booster_action() and st.cells[aimed[i][1]][aimed[i][0]][1] == Cell.CLEAN:
                     actions[i] = []
-                elif isinstance(last_com, CloneAction) and not last_com.validate(st, st.bots[i]):
+                elif isinstance(last_com, CloneAction) and st.boosters[Booster.CLONE] > 0:
                     actions[i] = []
+                # elif last_com.booster_action() and not last_com.validate(st, st.bots[i]):
+                #     actions[i] = []
                 else:
                     actions[i] = actions[i][1:]
         bot_num = 0
         for x in actions:
             if len(x) == 0:
                 useBooster(st, bot_num)
+                if bot_num == 0:
+                    collectBoosters(st, bot_num, cloneP)
                 if bot_num > 0 or not collectBoosters(st, bot_num):
                     if not parallelRotSolver(st, bot_num):
                         actions[bot_num].append(DoNothing())
@@ -135,7 +141,7 @@ def drunkMasters(st):
             break
 
     while st.clean_left_f() != 0:
-        print("{}: {}".format(step, st.clean_left))
+        #print("{}: {}".format(step, st.clean_left))
         if all([len(x) > 0 for x in actions]):
             st.nextActions([x[0] for x in actions])
             step += 1

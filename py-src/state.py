@@ -268,6 +268,9 @@ class State(object):
                 #                    .format(action, len(bot.actions),
                 #                            [str(x) for x in actions],
                 #                            [str(x) for x in bot.actions]))
+                #bot.addDoNothing()
+                #bot.process(self)
+                #bot.tickTime()
                 pass
         self.tickNum += 1
         if self.lockBoosters > 0:
@@ -291,6 +294,7 @@ class State(object):
             self.clean_left -= 1
         if self.cell(*pos)[0] != Booster.MYSTERIOUS:
             self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
+            self.lockBoosters = 2
 
     def is_cleaned(self):
         return self.clean_left <= 0

@@ -38,7 +38,7 @@ COLLECTABLE = [
     Booster.MANIPULATOR,
     # Booster.TELEPORT,
     # Booster.DRILL,
-    Booster.CLONE,
+    # Booster.CLONE,
     # Booster.MYSTERIOUS,
 ]
 # paint stage
