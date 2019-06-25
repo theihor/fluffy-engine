@@ -196,7 +196,9 @@ class AttachWheels(BoosterAction):
         super().__init__("F")
 
     def validate(self, state: State, bot):
-        return state.boosters[Booster.WHEEL] > 0 and not bot.drill_duration > 0
+        return (state.boosters[Booster.WHEEL] > 0
+                #and not bot.drill_duration > 0
+                and not bot.wheel_duration > 0)
         #     return False
 
     def process(self, state: State, bot):
@@ -210,7 +212,9 @@ class AttachDrill(BoosterAction):
         super().__init__("L")
 
     def validate(self, state: State, bot):
-        return state.boosters[Booster.DRILL] > 0 and not bot.wheel_duration > 0
+        return (state.boosters[Booster.DRILL] > 0
+                #and not bot.wheel_duration > 0
+                and not bot.drill_duration > 0)
         #     return False
 
     def process(self, state: State, bot):

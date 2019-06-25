@@ -14,14 +14,24 @@ import sys
 
 class GoToClosestRot(SimpleAction):
     def __init__(self):
-        super().__init__("G")
+        super().__init__("GR")
 
     def validate(self, state: State, bot):
-        k = get_key(state, bot, self)
-        return 'r' not in k
+        return True
 
     def process(self, state: State, bot):
         super().process(state, bot)
+
+class GoToBooster(SimpleAction):
+    def __init__(self):
+        super().__init__("GB")
+
+    def validate(self, state: State, bot):
+        return True
+
+    def process(self, state: State, bot):
+        super().process(state, bot)
+
 
 
 class ShiftRandom(Shift):
@@ -49,28 +59,28 @@ constant_actions = [
     TurnLeft(),
     TurnRight(),
     #GoToClosestRot(),
-    AttachDrill(),
-    AttachWheels(),
-    Reset(),
-    ShiftRandom()
+    #AttachDrill(),
+    #AttachWheels(),
+    #Reset(),
+    #ShiftRandom()
 ]
 
 
 def all_actions(bot):
-    lst = constant_actions.copy()
+    #lst = constant_actions.copy()
     #lst.append(AttachManipulator(SimpleAttacher().get_position(bot)))
-    lst.append(AttachManipulator(ExperimentalAttacher(forward).get_position(bot)))
-    lst.append(AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot)))
+    #lst.append(AttachManipulator(ExperimentalAttacher(forward).get_position(bot)))
+    #lst.append(AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot)))
     #lst.append(AttachManipulator(ExperimentalAttacher(experimental).get_position(bot)))
     #lst.append(AttachManipulator(ExperimentalAttacher(long_center).get_position(bot)))
     #lst.append(AttachManipulator(ExperimentalAttacher(long_left).get_position(bot)))
     #lst.append(AttachManipulator(ExperimentalAttacher(long_right).get_position(bot)))
 
-    return lst
+    return constant_actions
 
 
 epsilon = 0.001
-alpha = 0.01 # learning rate
+alpha = 0.05 # learning rate
 gamma = 0.98  # discount factor
 
 local_visibility_map = {
@@ -150,6 +160,16 @@ traverse_list = {
                    False)
 }
 
+boosters = [
+    Booster.WHEEL,
+    Booster.MANIPULATOR,
+    # Booster.TELEPORT,
+    Booster.DRILL,
+    # Booster.CLONE,
+    # Booster.MYSTERIOUS,
+]
+priority_boosters = [Booster.MANIPULATOR]
+
 def state_key(state):
     """bot sees cells relative to itself"""
     bot = state.bots[0]
@@ -202,8 +222,9 @@ def state_key(state):
                 arr.append('m')
                 return
             (booster, c) = state.cell(x, y)
-            if booster is not None:
-                arr.append('b')
+            if booster in priority_boosters:
+                if is_visible(x, y): arr.append('b')
+                else: arr.append('i')
                 return
 
             if c == Cell.ROT:
@@ -244,7 +265,7 @@ def state_key(state):
     return key
 
 
-def get_key(state, bot, action):
+def get_key(state, bot, action, s_key=None):
     boosters = []
     if bot.drill_duration > 0:
         boosters.append('D')
@@ -260,17 +281,18 @@ def get_key(state, bot, action):
             isinstance(action, AttachWheels):
         return ''.join(boosters) + str(action)
     else:
-        return ''.join(boosters) + state_key(state) + str(action)
+        if s_key is None: s_key = state_key(state)
+        return ''.join(boosters) + s_key + str(action)
 
 
-def q_action(state, bot):
+def q_action(state, bot, s_key=None):
     valid_actions = [a for a in all_actions(bot) if translate_move(bot, a).validate(state, bot)]
     kmap = {}
     def value(a):
         if a in kmap:
             key = kmap[a]
         else:
-            key = get_key(state, bot, a)
+            key = get_key(state, bot, a, s_key=s_key)
             kmap[a] = key
         if not key in qmap:
             qmap[key] = random.random() * 1e-5
@@ -325,24 +347,24 @@ def learning_run1(state, random_start=False):
     bot = state.bots[0]
     action_list = []
 
-    max_steps = state.height * state.width * 2
+    max_steps = state.height * state.width
 
     # collect boosters
-    while True:
-        #print(bot.pos)
-        path = pathfinder.bfsFind(state, bot.pos, boosterP(state))
-        if path is None: break
+    # while True:
+    #     #print(bot.pos)
+    #     path = pathfinder.bfsFind(state, bot.pos, boosterP(state))
+    #     if path is None: break
+    #
+    #     for (pos, nextPos) in zip(path, path[1:]):
+    #         a = moveCommand(pos, nextPos)
+    #         action_list.append(a)
+    #         state.nextAction(a)
 
-        for (pos, nextPos) in zip(path, path[1:]):
-            a = moveCommand(pos, nextPos)
-            action_list.append(a)
-            state.nextAction(a)
-
-    for i in range(state.boosters[Booster.MANIPULATOR]):
-        a = AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot))
-        if a.validate(state, bot):
-            action_list.append(a)
-            state.nextAction(a)
+    # for i in range(state.boosters[Booster.MANIPULATOR]):
+    #     a = AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot))
+    #     if a.validate(state, bot):
+    #         action_list.append(a)
+    #         state.nextAction(a)
 
     # if random_start:
     #     start_pos = None
@@ -357,9 +379,9 @@ def learning_run1(state, random_start=False):
     steps = 0
     steps_from_last_positive_r = 0
 
-    def next_path():
+    def next_path(end_p):
         return pathfinder.bfsFindExt(state, bot.pos,
-                                     lambda l, x, y: state.cell(x, y)[1] == Cell.ROT,
+                                     end_p,
                                      wheels=bot.wheel_duration,
                                      drill=bot.drill_duration)
         # if bot.drill_duration > 3:
@@ -371,49 +393,99 @@ def learning_run1(state, random_start=False):
         #     return pathfinder.bfsFind(state, bot.pos,
         #                               lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
 
-    go = GoToClosestRot()
+    def go_to(end_p):
+        path = next_path(end_p)
+        if path:
+            commands = []
+            for (pos, nextPos) in zip(path, path[1:]):
+                commands.append(moveCommand(pos, nextPos))
+            # print(state.bots[0].pos, path)
+            # print([str(c) for c in commands])
+            for c in commands:
+                if c.validate(state, state.bots[0]):
+                    action_list.append(c)
+                    state.nextAction(c)
+                    nonlocal steps
+                    steps += 1
+            return True
+        else: return False
+
+
+    #goToRot = GoToClosestRot()
+    #goToBooster = GoToBooster()
+
 
     while not state.is_all_clean() and steps < max_steps:
         #print(steps)
 
-        if go.validate(state, bot):
-            path = next_path()
-            if path:
-                commands = []
-                for (pos, nextPos) in zip(path, path[1:]):
-                    commands.append(moveCommand(pos, nextPos))
-                # print(state.bots[0].pos, path)
-                # print([str(c) for c in commands])
-                for c in commands:
-                    if c.validate(state, state.bots[0]):
-                        action_list.append(c)
-                        state.nextAction(c)
-                        steps += 1
+        sk = state_key(state)
+        #print(sk)
+
+        if 'r' not in sk or steps_from_last_positive_r > 10: # then go to closest rot
+            if go_to(lambda l, x, y: (state.cell(x, y)[1] == Cell.ROT
+                                      or state.cell(x, y)[0] in boosters)):
+                continue
             else:
                 return (None, state)
-        else:
-
-            (a, v, key) = q_action(state, bot)
-            #print(str(a), end='')
-            r = 0
-            action_list.append(a)
-            state.nextAction(a)
-            steps += 1
-
-            if state.last_painted > 0:
-                r = state.last_painted
-                steps_from_last_positive_r = 0
+        elif 'b' in sk: # then go to booster
+            if go_to(lambda l, x, y: state.cell(x, y)[0] in priority_boosters):
+                continue
             else:
-                steps_from_last_positive_r += 1
-                r = -1 - (steps_from_last_positive_r / 1e5)
+                return (None, state)
 
-            # update Q
+        # try to activate boosters
+        # manipulators
+        attached = False
+        for i in range(state.boosters[Booster.MANIPULATOR]):
+            attachers = [
+                AttachManipulator(SimpleAttacher().get_position(bot)),
+                AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot)),
+                AttachManipulator(ExperimentalAttacher(forward).get_position(bot)),
+                AttachManipulator(ExperimentalAttacher(experimental).get_position(bot)),
+            ]
+            random.shuffle(attachers)
+            for a in attachers:
+                if a.validate(state, bot):
+                    action_list.append(a)
+                    state.nextAction(a)
+                    attached = True
+        if attached: continue
 
-            (_, v1, _) = q_action(state, bot)
-            #print("r = " + str(r) + ", q = " + str(qmap[key]), end=" ")
+        # drill
+        if state.boosters[Booster.DRILL] > 0:
+            a = AttachDrill()
+            if a.validate(state, bot):
+                action_list.append(a)
+                state.nextAction(a)
+                continue
+        # wheel
+        if state.boosters[Booster.DRILL] > 0:
+            a = AttachWheels()
+            if a.validate(state, bot):
+                action_list.append(a)
+                state.nextAction(a)
+                continue
 
-            qmap[key] += alpha * (r + gamma * v1 - v)
-            qmap["count of observations"] += 1
+        (a, v, key) = q_action(state, bot)
+        #print(str(a), end='')
+        r = 0
+        action_list.append(a)
+        state.nextAction(a)
+        steps += 1
+
+        if state.last_painted > 0:
+            r = state.last_painted
+            steps_from_last_positive_r = 0
+        else:
+            steps_from_last_positive_r += 1
+            r = -1
+
+        # update Q
+
+        (_, v1, _) = q_action(state, bot)
+        #print("r = " + str(r) + ", q = " + str(qmap[key]), end=" ")
+        qmap[key] += alpha * (r + gamma * v1 - v)
+        qmap["count of observations"] += 1
 
             #print("q1 = " + str(qmap[key]))
 
@@ -445,7 +517,7 @@ def learn(task_id, qmap_fname):
     best_sol = None
     while not best_sol:
         (best_sol, s) = learning_run1(get_state(task_id), random_start=False)
-    iterations = 1000 // s.width
+    iterations = 5000 // s.width
 
     best_len = len(best_sol)
     print(str(task_id) + " 0: " + str(best_len))
