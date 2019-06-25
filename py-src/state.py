@@ -218,6 +218,7 @@ class State(object):
 
         while x != x2 or y != y2:
             #print("cheking " + str(x) + " " + str(y))
+            #print('for', (x2 - x1, y2 - y1), 'check', x - x1, y - y1 )
             p1 = (x + dx, y)
             if cross_point(p1, line):
                 if is_obstacle(*p1):

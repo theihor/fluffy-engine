@@ -69,67 +69,178 @@ def all_actions(bot):
     return lst
 
 
-epsilon = 0.00
+epsilon = 0.001
 alpha = 0.01 # learning rate
 gamma = 0.98  # discount factor
 
+local_visibility_map = {
+            (-3, -3): [(-2, -2), (-1, -1)],
+            (-3, +3): [(-2, +2), (-1, +1)],
+            (+3, -3): [(+2, -2), (+1, -1)],
+            (+3, +3): [(+2, +2), (+1, +1)],
+
+            (-2, -2): [(-1, -1)],
+            (-2, +2): [(-1, +1)],
+            (+2, -2): [(+1, -1)],
+            (+2, +2): [(+1, +1)],
+
+            (-1, -1): [],
+            (-1, +1): [],
+            (+1, -1): [],
+            (+1, +1): [],
+
+            (+0, +1): [],
+            (+0, -1): [],
+            (+1, +0): [],
+            (-1, +0): [],
+
+            (+0, +2): [(+0, +1)],
+            (+0, -2): [(+0, -1)],
+            (+2, +0): [(+1, +0)],
+            (-2, +0): [(-1, +0)],
+
+            (+0, +3): [(+0, +1), (+0, +2)],
+            (+0, -3): [(+0, -1), (+0, -2)],
+            (+3, +0): [(+1, +0), (+2, +0)],
+            (-3, +0): [(-1, +0), (-2, +0)],
+
+            (-3, +2): [(-2, +2), (-2, +1), (-1, +1), (-1, 0)],
+            (-3, -2): [(-2, -2), (-2, -1), (-1, -1), (-1, 0)],
+            (+3, +2): [(+2, +2), (+2, +1), (+1, +1), (+1, 0)],
+            (+3, -2): [(+2, -2), (+2, -1), (+1, -1), (+1, 0)],
+
+            (-2, +3): [(-2, +2), (-1, +2), (-1, +1), (0, +1)],
+            (-2, -3): [(-2, -2), (-1, -2), (-1, -1), (0, -1)],
+            (+2, +3): [(+2, +2), (+1, +2), (+1, +1), (0, +1)],
+            (+2, -3): [(+2, -2), (+1, -2), (+1, -1), (0, -1)],
+
+            (-1, -3): [(-1, -2), (0, -1)],
+            (+1, -3): [(+1, -2), (0, -1)],
+            (-1, +3): [(-1, +2), (0, +1)],
+            (+1, +3): [(+1, +2), (0, +1)],
+
+            (-3, -1): [(-2, -1), (-1, 0)],
+            (+3, -1): [(+2, -1), (+1, 0)],
+            (-3, +1): [(-2, +1), (-1, 0)],
+            (+3, +1): [(+2, +1), (+1, 0)],
+
+            (-1, -2): [(-1, -1), (0, -1)],
+            (+1, -2): [(+1, -1), (0, -1)],
+            (-1, +2): [(-1, +1), (0, +1)],
+            (+1, +2): [(+1, +1), (0, +1)],
+
+            (-2, -1): [(-1, -1), (-1, 0)],
+            (+2, -1): [(+1, -1), (+1, 0)],
+            (-2, +1): [(-1, +1), (-1, 0)],
+            (+2, +1): [(+1, +1), (+1, 0)],
+}
+
+traverse_list = {
+    Direction.RIGHT: (list(reversed(range(-3, +4))),
+                      list(reversed(range(-3, +4))),
+                      True),
+    Direction.DOWN:  (list(reversed(range(-3, +4))),
+                      list(range(-3, +4)),
+                      False),
+    Direction.LEFT: (list(range(-3, +4)),
+                     list(range(-3, +4)),
+                     True),
+    Direction.UP: (list(range(-3, +4)),
+                   list(reversed(range(-3, +4))),
+                   False)
+}
 
 def state_key(state):
     """bot sees cells relative to itself"""
     bot = state.bots[0]
     (bx, by) = bot.pos
     arr = []
-    #ms = [(bx + x, by + y) for (x, y) in bot.manipulators] + [(bx, by)]
+    ms = [(bx + x, by + y) for (x, y) in bot.manipulators] + [(bx, by)]
 
-    xl = []; yl = []
-    outer_x = True
-    if bot.direction == Direction.RIGHT:
-        xl = list(range(bx - 2, bx + 4))
-        xl.reverse()
-        yl = list(range(by - 3, by + 4))
-        yl.reverse()
-        outer_x = True
-    elif bot.direction == Direction.DOWN:
-        xl = list(range(bx - 3, bx + 4))
-        xl.reverse()
-        yl = list(range(by - 2, by + 4))
-        outer_x = False
-    elif bot.direction == Direction.LEFT:
-        xl = list(range(bx - 2, bx + 4))
-        yl = list(range(by - 3, by + 4))
-        outer_x = True
-    else:
-        xl = list(range(bx - 3, bx + 4))
-        yl = list(range(by - 2, by + 4))
-        yl.reverse()
-        outer_x = False
+    (xds, yds, outer_x) = traverse_list[bot.direction]
+    xl = [bx + dx for dx in xds]
+    yl = [by + dy for dy in yds]
+
+    # if bot.direction == Direction.RIGHT:
+    #     xl = list(range(bx - 3, bx + 4))
+    #     xl.reverse()
+    #     yl = list(range(by - 3, by + 4))
+    #     yl.reverse()
+    #     outer_x = True
+    # elif bot.direction == Direction.DOWN:
+    #     xl = list(range(bx - 3, bx + 4))
+    #     xl.reverse()
+    #     yl = list(range(by - 3, by + 4))
+    #     outer_x = False
+    # elif bot.direction == Direction.LEFT:
+    #     xl = list(range(bx - 3, bx + 4))
+    #     yl = list(range(by - 3, by + 4))
+    #     outer_x = True
+    # else:
+    #     xl = list(range(bx - 3, bx + 4))
+    #     yl = list(range(by - 3, by + 4))
+    #     yl.reverse()
+    #     outer_x = False
+
+    def is_visible(x, y):
+        to_check = local_visibility_map[(x - bx, y - by)]
+        #print(to_check)
+        for (dx, dy) in to_check:
+            x1, y1 = bx + dx, by + dy
+            if 0 <= x1 < state.width and 0 <= y < state.height:
+                #print(x1, y1)
+                (_, c) = state.cell(x1, y1)
+                if c == Cell.OBSTACLE:
+                    return False
+            else:
+                return False
+        return True
 
     def process_p(x, y):
         if 0 <= x < state.width and 0 <= y < state.height:
-            (_, c) = state.cell(x, y)
+            if (x, y) in ms:
+                arr.append('m')
+                return
+            (booster, c) = state.cell(x, y)
+            if booster is not None:
+                arr.append('b')
+                return
+
             if c == Cell.ROT:
-                if state.visible((x, y)):
+
+                # if is_visible(x, y) != state.visible((x, y)):
+                #     #print((bx - x, by - y))
+                #     raise RuntimeError("is_visible failed!")
+
+                if is_visible(x, y):
                     arr.append('r')
                 else:
                     arr.append('i')
+                #arr.append('r')
+            elif c == Cell.OBSTACLE:
+                arr.append('o')
+            elif c == Cell.CLEAN:
+                arr.append('c')
             else:
-                arr.append('c')  # clean
+                raise RuntimeError('Unexpected Cell')
         else:
             arr.append('o')
-
+    #print(xl, yl)
     if outer_x:
         for x in xl:
+            #if arr: print(''.join(arr[-len(yl):]))
             for y in yl:
                 process_p(x, y)
     else:
         for y in yl:
+            #if arr: print(''.join(arr[-len(xl):]))
             for x in xl:
                 process_p(x, y)
 
     key = ''.join(arr)
-    if len(xl) * len(yl) != 42:
-        print(str(len(xl)) + " x " + str(len(yl)))
-        print(key)
+    # if len(xl) * len(yl) != 49:
+    #     print(str(len(xl)) + " x " + str(len(yl)))
+    #     print(key)
     return key
 
 
@@ -334,7 +445,7 @@ def learn(task_id, qmap_fname):
     best_sol = None
     while not best_sol:
         (best_sol, s) = learning_run1(get_state(task_id), random_start=False)
-    iterations = 1 #// s.width
+    iterations = 1000 // s.width
 
     best_len = len(best_sol)
     print(str(task_id) + " 0: " + str(best_len))
@@ -344,11 +455,8 @@ def learn(task_id, qmap_fname):
         (sol, _) = learning_run1(get_state(task_id), random_start=random_start)
         if sol is None: continue
 
-        if i % (iterations // 10) == 0:
+        if i % (iterations // 5) == 0:
             print(str(task_id) + " " + str(i) + ": " + str(best_len))
-            with open(qmap_fname, "wb") as f:
-                print("Dumping", qmap_fname, "with ", qmap["count of observations"], "observations")
-                pickle.dump(qmap, f)
 
         if not random_start and best_len >= len(sol):
             if best_len > len(sol):
@@ -356,6 +464,9 @@ def learn(task_id, qmap_fname):
             best_sol = sol
             best_len = len(sol)
 
+    with open(qmap_fname, "wb") as f:
+        print("Dumping", qmap_fname, "with ", qmap["count of observations"], "observations")
+        pickle.dump(qmap, f)
 
 
     #print(qmap)
