@@ -18,6 +18,7 @@ import sklearn.cluster
 import numpy as np
 import math
 import disjoint_set
+import pprint
 
 
 def solve(taskFile, solutionFile, solver, add_score=True):
@@ -269,7 +270,7 @@ def split_into_regions(st):
                 all_points.append([x, y])
 
     X = np.array(all_points)
-    k = math.ceil(len(all_points) / 100)
+    k = math.ceil(len(all_points) / 300)
     print(k)
 
     # TODO: post-process clusters to avoid non-connected groups
@@ -310,8 +311,54 @@ def split_into_regions(st):
                 for x, y in s:
                     ids_yx[y][x] = max_label
 
+    # merging small regions
+
+    MIN_SIZE = 20
+    id_to_blob = ids_yx_to_blobs_map(ids_yx)
+
+    # collect candidates
+    ids_to_merge = []
+    for _id, blob in id_to_blob.items():
+        if len(blob) < MIN_SIZE:
+            ids_to_merge.append(_id)
+
+    nmap = make_region_neighbours_map(ids_yx)
+
+    while len(ids_to_merge) > 0:
+        b = ids_to_merge.pop()
+        if len(id_to_blob[b]) >= MIN_SIZE:
+            continue
+        links = nmap[b]
+        if len(links) == 0:
+            continue
+        # will link with a
+        a = next(iter(links))
+
+        # bn -- b neighbour
+        for bn in nmap[b]:
+            nmap[bn].remove(b)
+            if bn != a:
+                nmap[bn].add(a)
+                nmap[a].add(bn)
+
+        # transfer points from b blob to a blob
+        for bp in id_to_blob[b]:
+            id_to_blob[a].add(bp)
+
+        del nmap[b]
+        del id_to_blob[b]
+
+    for _id, blob in id_to_blob.items():
+        for x, y in blob:
+            ids_yx[y][x] = _id
+
     return ids_yx
 
+
+
+def remove_if_present(_set, _item):
+    if _item in _set:
+        _set.remove(_item)
 
 def make_region_neighbours_map(ids_yx):
     id_to_neighbours_map = {}
@@ -319,13 +366,15 @@ def make_region_neighbours_map(ids_yx):
     def ensure_set(a):
         if a == 0:
             return
-        if not a in id_to_neighbours_map:
+        if a not in id_to_neighbours_map:
             id_to_neighbours_map[a] = set()
 
     def link(a, b):
         if a == 0:
             return
         if b == 0:
+            return
+        if a == b:
             return
         id_to_neighbours_map[a].add(b)
         id_to_neighbours_map[b].add(a)
@@ -375,13 +424,11 @@ def make_traversal_plan(region_ids_yx, initial_id):
 
     G = nx.Graph()
 
-    # TODO: use distances between centroids as weights
     for a, links in id_to_neighbours_map.items():
         for b in links:
             G.add_edge(a, b, weight=1)
 
-    G_min = nx.algorithms.minimum_spanning_tree(G)
-
+    #TODO: initial_id would be considered as root, and thus travsed last
     return list(nx.dfs_postorder_nodes(G, source=initial_id))
 
 
