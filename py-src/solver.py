@@ -11,20 +11,23 @@ from predicates import *
 import copy
 from optimizer import optimize, optimize_small_clean, optimize_long_moves, optimize_teleports
 import networkx as nx
-import postman_problems
+import postman_problems.solver
 import csv
 import tempfile
+import sklearn.cluster
+import numpy as np
+import math
 
 
-def solve(taskFile, solutionFile, solver):
+def solve(taskFile, solutionFile, solver, add_score=True):
     st = State.decode(decode.parse_task(taskFile))
-    # init_st = copy.deepcopy(st)
+    init_st = copy.deepcopy(st)
     new_state = solver(st)
     # for it in range(1):
     #     new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_small_clean)
     #     new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_long_moves)
     #     new_state = optimize(init_st, new_state.bots[0].actions, 0, optimize_teleports)
-    Encoder.encodeToFile(solutionFile, new_state)
+    Encoder.encodeToFile(solutionFile, new_state, add_score=add_score)
 
 
 def moveCommand(posFrom, posTo):
@@ -253,95 +256,32 @@ def solveWithBlobs(st, blobs):
 
 
 def split_into_regions(st):
-    id_counter = 0
+    all_points = []
     ids_yx = [[0]*st.width for _ in range(st.height)]
-
-    def next_id():
-        nonlocal id_counter
-        id_counter += 1
-        return id_counter
 
     def is_obstacle(x, y):
         return st.cell(x, y)[1] is Cell.OBSTACLE
 
     for y in range(st.height):
-        # first pass, inherit id from top
         for x in range(st.width):
-            if is_obstacle(x, y):
-                continue
-            if y == 0:
-                continue
-            if ids_yx[y-1][x] != 0:
-                ids_yx[y][x] = ids_yx[y-1][x]
+            if not is_obstacle(x, y):
+                all_points.append([x, y])
 
-        # second pass, propagate id to the right
-        for x in range(st.width):
-            if is_obstacle(x, y):
-                continue
-            if x == 0:
-                continue
+    X = np.array(all_points)
+    k = math.ceil(len(all_points) / 100)
+    print(k)
 
-            if ids_yx[y][x-1] != 0 and ids_yx[y][x] == 0:
-                ids_yx[y][x] = ids_yx[y][x-1]
+    # TODO: post-process clusters to avoid non-connected groups
+    #       merge very small clusters with neighbors
+    kmeans = sklearn.cluster.KMeans(n_clusters=k,
+                                    random_state=0).fit(X)
 
-        # second and a half pass, break propagation to the right after obstacle
-        last_id_before_obstacle = 0
-        replacement_id = None
-        for x in range(st.width):
-            if is_obstacle(x, y):
-                if x != 0 and not is_obstacle(x-1, y):
-                    last_id_before_obstacle = ids_yx[y][x-1]
-                continue
-
-            if ids_yx[y][x] == last_id_before_obstacle and last_id_before_obstacle != 0:
-                if not replacement_id:
-                    replacement_id = next_id()
-                ids_yx[y][x] = replacement_id
-            else:
-                last_id_before_obstacle = 0
-                replacement_id = None
-
-        # third pass, propagate id to the left
-        for x in reversed(range(st.width)):
-            if is_obstacle(x, y):
-                continue
-            if x == st.width-1:
-                continue
-            if ids_yx[y][x+1] != 0 and ids_yx[y][x] == 0:
-                ids_yx[y][x] = ids_yx[y][x+1]
-
-        # third and a half pass, break propagation to the left after obstacle
-        last_id_before_obstacle = 0
-        replacement_id = None
-        for x in reversed(range(st.width)):
-            if is_obstacle(x, y):
-                if x != st.width-1 and not is_obstacle(x+1, y):
-                    last_id_before_obstacle = ids_yx[y][x+1]
-                continue
-
-            if ids_yx[y][x] == last_id_before_obstacle and last_id_before_obstacle != 0:
-                if not replacement_id:
-                    replacement_id = next_id()
-                ids_yx[y][x] = replacement_id
-            else:
-                last_id_before_obstacle = 0
-                replacement_id = None
-
-        # last pass, allocate new ids
-        for x in range(st.width):
-            if is_obstacle(x, y):
-                continue
-            if ids_yx[y][x] == 0:
-                if x == 0 or ids_yx[y][x-1] == 0:
-                    ids_yx[y][x] = next_id()
-                else:
-                    ids_yx[y][x] = ids_yx[y][x-1]
-
-    # TODO: post processing pass to merge small regions with neighbours?
-    # TODO: do not propagate through narrow regions?
-    # TODO: limit region sizes? (atleast height? proportional to map height?)
+    labels = kmeans.labels_
+    for p, l in zip(all_points, labels):
+        ids_yx[p[1]][p[0]] = l+1
 
     return ids_yx
+
 
 def make_region_neighbours_map(ids_yx):
     id_to_neighbours_map = {}
@@ -376,6 +316,7 @@ def make_traversal_plan(region_ids_yx, initial_id):
 
     G = nx.Graph()
 
+    # TODO: use distances between centroids as weights
     for a, links in id_to_neighbours_map.items():
         for b in links:
             G.add_edge(a, b, weight=1)
@@ -394,6 +335,8 @@ def make_traversal_plan(region_ids_yx, initial_id):
         tour, _ = postman_problems.solver.cpp(edges_csv.name,
                                               start_node=str(initial_id))
 
+    # TODO: try post-processing plan to by adding edges from origina
+    # graph?
     return list(map(lambda x: int(x[0]), tour))
 
 
@@ -435,13 +378,14 @@ def draw_regions(st, ids_yx, traversal_plan, svg_file):
 
     traversal_coords = list(map(lambda x: id_to_coord[x], traversal_plan))
 
-    svg_traversal_line = svg.polyline(
-        points=traversal_coords,
-        stroke="red",
-        stroke_width="1",
-        fill_opacity="0"
-    )
-    svg.add(svg_traversal_line)
+    if len(traversal_coords) > 0:
+        svg_traversal_line = svg.polyline(
+            points=traversal_coords,
+            stroke="red",
+            stroke_width="1",
+            fill_opacity="0"
+        )
+        svg.add(svg_traversal_line)
 
     svg.save()
 
@@ -479,6 +423,22 @@ def move_to_blob(st, blob):
     return path[len(path) - 1]
 
 
+def closestRotInBlob2(st, blob=None):
+    if blob is None:
+        path = pathfinder.bfsFindClosest(st, st.botPos(),
+                                         wrapP(st),
+                                         rank=lambda x, y:
+                                         -numCleaned(st, (x, y), 0))
+    else:
+        path = pathfinder.bfsFindClosest(
+            st, st.botPos(),
+            lambda l, x, y: st.cell(x, y)[1] == Cell.ROT and (x, y) in blob)
+    if path is None:
+        return None
+    pathToCommands(path, st)
+    return path[len(path) - 1]
+
+
 def solve_with_regions(st):
     bot = st.bots[0]
     collectBoosters(st, 0)
@@ -489,25 +449,43 @@ def solve_with_regions(st):
     initial_id = ids_yx[curPos[1]][curPos[0]]
     assert initial_id != 0
     plan = make_traversal_plan(ids_yx, initial_id)
-    visited = set()
+    print(list(plan))
+    processed = set()
 
+    blob_points = 0
     for blob_id in plan:
         blob = id_to_blob[blob_id]
         assert blob
         curPos = move_to_blob(st, blob)
-        if blob not in visited:
-            visited.add(blob_id)
+        if blob_id not in processed:
+            processed.add(blob_id)
+            blob_points += len(blob)
+            # TODO: use mcts inside regions to allow rotations
             while True:
-                nextPos = closestRotInBlob(st, blob, {})
+                nextPos = closestRotInBlob2(st, blob)
                 if nextPos is None:
                     break
+
+    print("blob points", blob_points)
+    total_points = 0
+    clean_points = 0
+    for y in range(st.height):
+        for x in range(st.width):
+            kind = st.cell(x, y)[1]
+            if kind is Cell.CLEAN:
+                clean_points += 1
+            if kind is not Cell.OBSTACLE:
+                total_points += 1
+    print("total_points", total_points)
+    print("clean_points", clean_points)
     return st
 
 
-# draw_regions_for_task(
-#     "/home/eddy/prog/fluffy-engine/desc/prob-150.desc",
-#     "/home/eddy/tmp/1.svg")
+draw_regions_for_task(
+    "/home/eddy/prog/fluffy-engine/desc/prob-150.desc",
+    "/home/eddy/tmp/1.svg")
 
 solve('/home/eddy/prog/fluffy-engine/desc/prob-150.desc',
       '/home/eddy/tmp/1.sol',
-      solve_with_regions)
+      solve_with_regions,
+      add_score=False)

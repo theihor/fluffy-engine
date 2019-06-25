@@ -1,4 +1,6 @@
 parsec
 svgwrite
+networkx==2.0
 postman_problems
-networkx
+numpy
+sklearn

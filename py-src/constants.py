@@ -1,28 +1,28 @@
-from enum import Enum, auto
+from enum import Enum
 
 from attachdecider import *
 
 
 class Cell(Enum):
-    ROT = auto()
-    CLEAN = auto()
-    OBSTACLE = auto()
+    ROT = 1
+    CLEAN = 2
+    OBSTACLE = 3
 
 
 class Booster(Enum):
-    WHEEL = auto()
-    DRILL = auto()
-    MANIPULATOR = auto()
-    MYSTERIOUS = auto()
-    TELEPORT = auto()
-    CLONE = auto()
+    WHEEL = 1
+    DRILL = 2
+    MANIPULATOR = 3
+    MYSTERIOUS = 4
+    TELEPORT = 5
+    CLONE = 6
 
 
 class Direction(Enum):
-    LEFT = auto()
-    RIGHT = auto()
-    UP = auto()
-    DOWN = auto()
+    LEFT = 1
+    RIGHT = 2
+    UP = 3
+    DOWN = 4
 
 DRILL_DURATION = 30
 WHEELS_DURATION = 50
