@@ -153,6 +153,8 @@ class DoNothing(SimpleAction):
         return True
 
     def process(self, state: State, bot):
+        bot.drill_duration -= 1
+        bot.wheel_duration -= 1
         pass
 
 
@@ -197,7 +199,7 @@ class AttachWheels(BoosterAction):
 
     def validate(self, state: State, bot):
         return (state.boosters[Booster.WHEEL] > 0
-                #and not bot.drill_duration > 0
+                and not bot.drill_duration > 0
                 and not bot.wheel_duration > 0)
         #     return False
 
@@ -213,7 +215,7 @@ class AttachDrill(BoosterAction):
 
     def validate(self, state: State, bot):
         return (state.boosters[Booster.DRILL] > 0
-                #and not bot.wheel_duration > 0
+                and not bot.wheel_duration > 0
                 and not bot.drill_duration > 0)
         #     return False
 
