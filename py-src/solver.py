@@ -17,6 +17,7 @@ import tempfile
 import sklearn.cluster
 import numpy as np
 import math
+import disjoint_set
 
 
 def solve(taskFile, solutionFile, solver, add_score=True):
@@ -277,8 +278,37 @@ def split_into_regions(st):
                                     random_state=0).fit(X)
 
     labels = kmeans.labels_
+    max_label = 0
     for p, l in zip(all_points, labels):
-        ids_yx[p[1]][p[0]] = l+1
+        l += 1
+        ids_yx[p[1]][p[0]] = l
+        if l > max_label:
+            max_label = l
+
+    id_to_ds = {}
+    def merge_if(cond, x, y, x1, y1):
+        _id = ids_yx[y][x]
+        if _id == 0 or not cond:
+            return
+        if _id not in id_to_ds:
+            id_to_ds[_id] = disjoint_set.DisjointSet()
+        if ids_yx[y1][x1] == _id:
+            id_to_ds[_id].union((x,y), (x1,y1))
+        else:
+            id_to_ds[_id].union((x,y), (x,y))
+
+    for y in range(st.height):
+        for x in range(st.width):
+            merge_if(x>0, x, y, x-1, y)
+            merge_if(y>0, x, y, x, y-1)
+
+    for ds in id_to_ds.values():
+        sets = list(ds.itersets())
+        if len(sets) > 1:
+            for s in sets[1:]:
+                max_label += 1
+                for x, y in s:
+                    ids_yx[y][x] = max_label
 
     return ids_yx
 
@@ -311,7 +341,7 @@ def make_region_neighbours_map(ids_yx):
     return id_to_neighbours_map
 
 
-def make_traversal_plan(region_ids_yx, initial_id):
+def make_traversal_plan_postman(region_ids_yx, initial_id):
     id_to_neighbours_map = make_region_neighbours_map(region_ids_yx)
 
     G = nx.Graph()
@@ -338,6 +368,21 @@ def make_traversal_plan(region_ids_yx, initial_id):
     # TODO: try post-processing plan to by adding edges from origina
     # graph?
     return list(map(lambda x: int(x[0]), tour))
+
+
+def make_traversal_plan(region_ids_yx, initial_id):
+    id_to_neighbours_map = make_region_neighbours_map(region_ids_yx)
+
+    G = nx.Graph()
+
+    # TODO: use distances between centroids as weights
+    for a, links in id_to_neighbours_map.items():
+        for b in links:
+            G.add_edge(a, b, weight=1)
+
+    G_min = nx.algorithms.minimum_spanning_tree(G)
+
+    return list(nx.dfs_postorder_nodes(G, source=initial_id))
 
 
 def draw_regions(st, ids_yx, traversal_plan, svg_file):
@@ -481,11 +526,6 @@ def solve_with_regions(st):
     return st
 
 
-draw_regions_for_task(
-    "/home/eddy/prog/fluffy-engine/desc/prob-150.desc",
-    "/home/eddy/tmp/1.svg")
-
-solve('/home/eddy/prog/fluffy-engine/desc/prob-150.desc',
-      '/home/eddy/tmp/1.sol',
-      solve_with_regions,
-      add_score=False)
+problem = "/home/eddy/prog/fluffy-engine/desc/prob-150.desc"
+draw_regions_for_task(problem, "/home/eddy/tmp/1.svg")
+solve(problem, '/home/eddy/tmp/1.sol', solve_with_regions, add_score=False)

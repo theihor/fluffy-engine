@@ -4,3 +4,4 @@ networkx==2.0
 postman_problems
 numpy
 sklearn
+disjoint-set
