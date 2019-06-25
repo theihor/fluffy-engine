@@ -456,7 +456,7 @@ def solve_with_regions(st):
     for blob_id in plan:
         blob = id_to_blob[blob_id]
         assert blob
-        curPos = move_to_blob(st, blob)
+        #curPos = move_to_blob(st, blob)
         if blob_id not in processed:
             processed.add(blob_id)
             blob_points += len(blob)
