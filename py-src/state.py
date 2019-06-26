@@ -67,7 +67,7 @@ def cross_point(point, line):
 class State(object):
     def __init__(self, contour, botPos: tuple, obstacles, boosters):
         self.bots = [Bot(botPos)]
-        self.last_painted = 0
+        self.last_painted = set()
         self.total_rot_cells = 0
         # map [booster -> amount]
         self.lockBoosters = 0
@@ -249,7 +249,7 @@ class State(object):
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
             if cell[1] == Cell.ROT and self.visibleFrom(bx, by, (x, y)):
-                self.last_painted += 1
+                self.last_painted.add((x, y))
                 self.total_rot_cells -= 1
                 self.cells[y][x] = (cell[0], Cell.CLEAN)
                 num_painted = 1
@@ -260,14 +260,14 @@ class State(object):
         if 0 <= x < self.width and 0 <= y < self.height:
             cell = self.cell(x, y)
             if (cell[1] == Cell.ROT and self.visibleFrom(bx, by, (x, y))):
-                self.last_painted = 0
+                self.last_painted = set()
                 func(x, y)
 
     def nextActions(self, actions):
         for (bot, action, bot_ind) in zip(self.bots, actions, range(len(self.bots))):
             if action.validate(self, bot):
                 bot.actions.append(action)
-                self.last_painted = 0
+                self.last_painted = set()
                 action.process(self, bot)
                 bot.process(self)
                 bot.tickTime()
@@ -276,7 +276,7 @@ class State(object):
                     bot.last_clean_num = 0
                     bot.last_booster = None
             else:
-                #Encoder.encodeToFile("../fail.sol", [bot.actions])
+                Encoder.encode_action_lists("../fail.sol", [bot.actions], self.tickNum)
                 raise RuntimeError("Invalid command {} at {} step"
                                    .format(action, len(bot.actions)))
         self.tickNum += 1

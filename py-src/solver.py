@@ -1,3 +1,5 @@
+import os
+import pickle
 import random
 
 import decode
@@ -19,6 +21,7 @@ import numpy as np
 import math
 import disjoint_set
 import pprint
+import q
 
 
 def solve(taskFile, solutionFile, solver, add_score=True):
@@ -32,18 +35,6 @@ def solve(taskFile, solutionFile, solver, add_score=True):
     Encoder.encodeToFile(solutionFile, new_state, add_score=add_score)
 
 
-def moveCommand(posFrom, posTo):
-    (xf, yf) = posFrom
-    (xt, yt) = posTo
-    if xt == xf:
-        if yt < yf:
-            return MoveDown()
-        else:
-            return MoveUp()
-    if xt < xf:
-        return MoveLeft()
-    else:
-        return MoveRight()
 
 
 def selectCommand(state, command, bot_num):
@@ -126,6 +117,24 @@ def collectBoosters(st, bot_num):
         else:
             continue
         st.nextAction(command)
+
+
+def collect_boosters2(state, bot_num):
+    bot = state.bots[bot_num]
+    while True:
+        #print(bot.pos)
+        path = pathfinder.bfsFind(state, bot.pos, boosterP(state))
+        if path is None: break
+
+        for (pos, nextPos) in zip(path, path[1:]):
+            m = moveCommand(pos, nextPos)
+            state.nextAction(m)
+        a = AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot))
+        if a.validate(state, bot):
+            state.nextAction(a)
+        else:
+            print('Cant attach manipulator :(')
+
 
 
 def closestRotSolver(st, bot_num=0):
@@ -531,9 +540,21 @@ def closestRotInBlob2(st, blob=None):
     return path[len(path) - 1]
 
 
-def solve_with_regions(st):
+def solve_with_regions(st, qmap_fname):
+    qmap = {}
+    if os.path.isfile(qmap_fname):
+        with open(qmap_fname, 'rb') as f:
+            print("Loading qmap...")
+            qmap = pickle.load(f)
+        print("Loaded qmap with",
+              qmap["count of observations"],
+              "observations and",
+              len(qmap),
+              "states observed at least once")
+    if "count of observations" not in qmap:
+        qmap["count of observations"] = 0
     bot = st.bots[0]
-    collectBoosters(st, 0)
+    collect_boosters2(st, 0)
     curPos = st.botPos()
 
     ids_yx = split_into_regions(st)
@@ -552,11 +573,15 @@ def solve_with_regions(st):
         if blob_id not in processed:
             processed.add(blob_id)
             blob_points += len(blob)
-            # TODO: use mcts inside regions to allow rotations
-            while True:
-                nextPos = closestRotInBlob2(st, blob)
-                if nextPos is None:
-                    break
+            from q import learning_run1_in_region
+            st = learning_run1_in_region(
+                qmap, st, blob, at_end_go_to=lambda l, x, y: st.cell(x, y)[1] == Cell.ROT)
+
+            # # TODO: use mcts inside regions to allow rotations
+            # while True:
+            #     nextPos = closestRotInBlob2(st, blob)
+            #     if nextPos is None:
+            #         break
 
     print("blob points", blob_points)
     total_points = 0
@@ -570,9 +595,17 @@ def solve_with_regions(st):
                 total_points += 1
     print("total_points", total_points)
     print("clean_points", clean_points)
+
+    with open(qmap_fname, "wb") as f:
+        print("Dumping", qmap_fname, "with ",
+              str(round(qmap["count of observations"] * 1e-6, 1)) + "M",
+              "observations")
+        pickle.dump(qmap, f)
     return st
 
 
-problem = "/home/eddy/prog/fluffy-engine/desc/prob-150.desc"
-draw_regions_for_task(problem, "/home/eddy/tmp/1.svg")
-solve(problem, '/home/eddy/tmp/1.sol', solve_with_regions, add_score=False)
+problem = "/home/theihor/repo/fluffy-engine/desc/prob-002.desc"
+draw_regions_for_task(problem, "/home/theihor/repo/fluffy-engine/1.svg")
+solve(problem, "/home/theihor/repo/fluffy-engine/q-sol/002.sol",
+      lambda s: solve_with_regions(s, '../qmaps/regions.pickle'),
+      add_score=False)

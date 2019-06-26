@@ -18,6 +18,13 @@ class Booster(Enum):
     CLONE = 6
 
 
+class Direction(Enum):
+    LEFT = 1
+    RIGHT = 2
+    UP = 3
+    DOWN = 4
+
+
 DRILL_DURATION = 30
 WHEELS_DURATION = 50
 STRICT_VALIDATION = False

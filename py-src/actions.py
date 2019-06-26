@@ -145,6 +145,20 @@ class MoveRight(SimpleAction):
             bot.process(state)
 
 
+def moveCommand(posFrom, posTo):
+    (xf, yf) = posFrom
+    (xt, yt) = posTo
+    if xt == xf:
+        if yt < yf:
+            return MoveDown()
+        else:
+            return MoveUp()
+    if xt < xf:
+        return MoveLeft()
+    else:
+        return MoveRight()
+
+
 class DoNothing(SimpleAction):
     def __init__(self):
         super().__init__("Z")
