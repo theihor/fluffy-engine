@@ -36,7 +36,7 @@ class MoveUp(SimpleAction):
             far_obstacle = state.cell(x, y + 2)[1] == Cell.OBSTACLE
             if close_obstacle and far_obstacle:
                 return bot.drill_duration > 1
-            else: return not close_obstacle
+            else: return not close_obstacle #and not far_obstacle
         else:
             if close_obstacle:
                 return bot.drill_duration > 0
@@ -67,7 +67,7 @@ class MoveDown(SimpleAction):
             far_obstacle = state.cell(x, y - 2)[1] == Cell.OBSTACLE
             if close_obstacle and far_obstacle:
                 return bot.drill_duration > 1
-            else: return not close_obstacle
+            else: return not close_obstacle #and not far_obstacle
         else:
             if close_obstacle:
                 return bot.drill_duration > 0
@@ -97,7 +97,7 @@ class MoveLeft(SimpleAction):
             far_obstacle = state.cell(x - 2, y)[1] == Cell.OBSTACLE
             if close_obstacle and far_obstacle:
                 return bot.drill_duration > 1
-            else: return not close_obstacle
+            else: return not close_obstacle #and not far_obstacle
         else:
             if close_obstacle:
                 return bot.drill_duration > 0
@@ -128,7 +128,7 @@ class MoveRight(SimpleAction):
             far_obstacle = state.cell(x + 2, y)[1] == Cell.OBSTACLE
             if close_obstacle and far_obstacle:
                 return bot.drill_duration > 1
-            else: return not close_obstacle
+            else: return not close_obstacle #and not far_obstacle
         else:
             if close_obstacle:
                 return bot.drill_duration > 0
@@ -153,8 +153,6 @@ class DoNothing(SimpleAction):
         return True
 
     def process(self, state: State, bot):
-        bot.drill_duration -= 1
-        bot.wheel_duration -= 1
         pass
 
 

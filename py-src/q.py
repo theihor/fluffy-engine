@@ -168,7 +168,13 @@ traverse_list = {
 def is_locally_visible(state, pos, d):
     (bx, by) = pos
     (dx, dy) = d
-    if state.cell(bx + dx, by + dy)[1] == Cell.OBSTACLE:
+    #print("is_locally_visible", d)
+    x, y = bx + dx, by + dy
+    if (x < 0
+        or x >= state.width
+        or y < 0
+        or y >= state.height
+        or state.cell(x, y)[1] == Cell.OBSTACLE):
         return False
 
     if d in local_visibility_map:
@@ -471,11 +477,12 @@ def learning_run1(state, random_start=False):
                     sk = state_key(state)
                     continue
             # wheel
+            #print("checking wheels")
             if (state.boosters[Booster.WHEEL] > 0
-                    # and (is_locally_visible(state, bot.pos, (0, 2))
-                    #      or is_locally_visible(state, bot.pos, (2, 0))
-                    #      or is_locally_visible(state, bot.pos, (-2, 0))
-                    #      or is_locally_visible(state, bot.pos, (0, -2)))
+                    and (is_locally_visible(state, bot.pos, (0, 2))
+                         or is_locally_visible(state, bot.pos, (2, 0))
+                         or is_locally_visible(state, bot.pos, (-2, 0))
+                         or is_locally_visible(state, bot.pos, (0, -2)))
             ):
                 a = AttachWheels()
                 if a.validate(state, bot):
@@ -491,13 +498,22 @@ def learning_run1(state, random_start=False):
                 steps_from_last_positive_r = 0
                 sk = state_key(state)
                 #print(get_key(state, bot, GoToClosestRot()))
+                #print_sk(sk)
+                #print()
                 continue
             elif bot.wheel_duration > 0:
+                moved = False
+                for m in all_actions(bot)[:4]:
+                    if m.validate(state, bot):
+                        moved = True
+                        action_list.append(m)
+                        state.nextAction(m)
+
                 #print(bot.wheel_duration)
                 #print_sk(sk)
-                #raise RuntimeError()
-                action_list.append(DoNothing())
-                state.nextAction(DoNothing())
+                #encoder.Encoder.encode_action_lists("../q-sol/fail.sol", [action_list], len(action_list))
+                if not moved: raise RuntimeError()
+                sk = state_key(state)
                 continue
             else:
                 raise RuntimeError('go_to rot failed')
@@ -593,7 +609,7 @@ def learn(task_id, qmap_fname):
     best_sol = None
     while not best_sol:
         (best_sol, s, r) = learning_run1(get_state(task_id), random_start=False)
-    iterations = 10 #40000 // s.width
+    iterations = 1000 #40000 // s.width
 
     best_len = len(best_sol)
     print(str(task_id) + " 0: " + str(best_len))
