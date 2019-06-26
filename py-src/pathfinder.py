@@ -143,8 +143,7 @@ def blobSplit(state, blobSize):
 def bfsFindExt(state, start, endP, availP=None,
                register=lambda l, x, y: None,
                wheels = 0,
-               drill = 0,
-               seek_alternatives=False):
+               drill = 0):
     prev = [row[:] for row in [[None] * state.width]
             * state.height]
     if availP is None:

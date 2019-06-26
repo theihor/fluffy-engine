@@ -1,3 +1,5 @@
+import math
+
 import pathfinder
 from constants import *
 from predicates import drillableP, boosterP
@@ -81,7 +83,7 @@ def all_actions(bot):
 
 epsilon = 0.001
 alpha = 0.02 # learning rate
-gamma = 0.98  # discount factor
+gamma = 0.99  # discount factor
 
 local_visibility_map = {
             (-3, -3): [(-2, -2), (-1, -1)],
@@ -255,7 +257,7 @@ def state_key(state):
                 arr.append('m')
                 return
             (booster, c) = state.cell(x, y)
-            if booster in priority_boosters:
+            if booster in boosters:
                 if is_visible(x, y): arr.append('b')
                 else: arr.append('i')
                 return
@@ -291,7 +293,7 @@ def state_key(state):
             for x in xl:
                 process_p(x, y)
     #print()
-    key = ''.join(arr)
+    key = str(bx) + "," + str(by) + ''.join(arr)
     # if len(xl) * len(yl) != 49:
     #     print(str(len(xl)) + " x " + str(len(yl)))
     #     print(key)
@@ -387,6 +389,7 @@ def learning_run1(state, random_start=False):
     total_reward = 0
 
     max_steps = state.height * state.width
+    diagonal_len = math.sqrt(state.width ** 2 + state.height ** 2)
 
     # collect boosters
     # while True:
@@ -417,9 +420,11 @@ def learning_run1(state, random_start=False):
 
     steps = 0
     steps_from_last_positive_r = 0
+    rewarded_steps = 0
 
     def next_path(end_p):
-        return pathfinder.bfsFindExt(state, bot.pos,
+        return pathfinder.bfsFindExt(state,
+                                     bot.pos,
                                      end_p,
                                      wheels=bot.wheel_duration,
                                      drill=bot.drill_duration)
@@ -432,8 +437,8 @@ def learning_run1(state, random_start=False):
         #     return pathfinder.bfsFind(state, bot.pos,
         #                               lambda l, x, y: state.cell(x, y)[1] == Cell.ROT)
 
-    def go_to(end_p):
-        path = next_path(end_p)
+    def go_to(end_p, path=None):
+        if path is None: path = next_path(end_p)
         #print(path)
         if path:
             commands = []
@@ -459,42 +464,73 @@ def learning_run1(state, random_start=False):
         #print(steps, ": ")
         #print_sk(sk)
 
-        if 'b' in sk:  # then go to booster
-            # print('going to priority b')
-            if go_to(lambda l, x, y: state.cell(x, y)[0] in priority_boosters):
+        # try to activate boosters
+        # manipulators
+        attached = False
+        for i in range(state.boosters[Booster.MANIPULATOR]):
+            attachers = [
+                AttachManipulator(SimpleAttacher().get_position(bot)),
+                AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot)),
+                AttachManipulator(ExperimentalAttacher(forward).get_position(bot)),
+                AttachManipulator(ExperimentalAttacher(experimental).get_position(bot)),
+            ]
+            random.shuffle(attachers)
+            for a in attachers:
+                if a.validate(state, bot):
+                    action_list.append(a)
+                    state.nextAction(a)
+                    attached = True
+                    break
+        if attached:
+            sk = state_key(state)
+            continue
+        # drill
+        if state.boosters[Booster.DRILL] > 0:
+            a = AttachDrill()
+            if a.validate(state, bot):
+                action_list.append(a)
+                state.nextAction(a)
                 sk = state_key(state)
                 continue
-            else:
-                return (None, state, total_reward)
+        # wheel
+        # print("checking wheels")
+        if (state.boosters[Booster.WHEEL] > 0
+                and (is_locally_visible(state, bot.pos, (0, 2))
+                     or is_locally_visible(state, bot.pos, (2, 0))
+                     or is_locally_visible(state, bot.pos, (-2, 0))
+                     or is_locally_visible(state, bot.pos, (0, -2)))
+        ):
+            a = AttachWheels()
+            if a.validate(state, bot):
+                action_list.append(a)
+                state.nextAction(a)
+                sk = state_key(state)
+                continue
 
-        if 'r' not in sk or steps_from_last_positive_r > 10: # then go to closest rot
-            # drill
-            if state.boosters[Booster.DRILL] > 0:
-                a = AttachDrill()
-                if a.validate(state, bot):
-                    action_list.append(a)
-                    state.nextAction(a)
-                    sk = state_key(state)
-                    continue
-            # wheel
-            #print("checking wheels")
-            if (state.boosters[Booster.WHEEL] > 0
-                    and (is_locally_visible(state, bot.pos, (0, 2))
-                         or is_locally_visible(state, bot.pos, (2, 0))
-                         or is_locally_visible(state, bot.pos, (-2, 0))
-                         or is_locally_visible(state, bot.pos, (0, -2)))
-            ):
-                a = AttachWheels()
-                if a.validate(state, bot):
-                    action_list.append(a)
-                    state.nextAction(a)
+
+        # see if priority booster lays nearby from time to time
+        if rewarded_steps % (diagonal_len // 5) == 0:
+            pb_endp = lambda l, x, y: state.cell(x, y)[0] in priority_boosters
+            p = next_path(pb_endp)
+            if p and len(p) < diagonal_len // 2:
+                if go_to(pb_endp, path=p):
                     sk = state_key(state)
                     continue
 
+        # if booster is very close
+        if 'b' in sk:  # then go to booster
+            # print('going to priority b')
+            if go_to(lambda l, x, y: state.cell(x, y)[0] in boosters):
+                sk = state_key(state)
+                continue
+
+        # if qbot does not see any rot cells
+        if 'r' not in sk or steps_from_last_positive_r > 10:
+            # then go to closest rot or priority_booster
             #print(steps_from_last_positive_r)
             #print('going to rot')
             if go_to(lambda l, x, y: (state.cell(x, y)[1] == Cell.ROT
-                                      or state.cell(x, y)[0] in boosters)):
+                                      or state.cell(x, y)[0] in priority_boosters)):
                 steps_from_last_positive_r = 0
                 sk = state_key(state)
                 #print(get_key(state, bot, GoToClosestRot()))
@@ -519,33 +555,14 @@ def learning_run1(state, random_start=False):
                 raise RuntimeError('go_to rot failed')
                 return (None, state, total_reward)
 
-        # try to activate boosters
-        # manipulators
-        attached = False
-        for i in range(state.boosters[Booster.MANIPULATOR]):
-            attachers = [
-                AttachManipulator(SimpleAttacher().get_position(bot)),
-                AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot)),
-                AttachManipulator(ExperimentalAttacher(forward).get_position(bot)),
-                AttachManipulator(ExperimentalAttacher(experimental).get_position(bot)),
-            ]
-            random.shuffle(attachers)
-            for a in attachers:
-                if a.validate(state, bot):
-                    action_list.append(a)
-                    state.nextAction(a)
-                    attached = True
-                    break
-        if attached:
-            sk = state_key(state)
-            continue
 
 
-
-        # state is s
+        # Q-learning: off-policy temporal difference control
+        #while 'r' in sk:
+            # state is s
         (a, v, key) = q_action(state, bot, s_key=sk)
         #print(str(a), end='')
-        r = 0
+
         action_list.append(a)
         state.nextAction(a)
         # state is s' now
@@ -557,14 +574,15 @@ def learning_run1(state, random_start=False):
             steps_from_last_positive_r = 0
         else:
             steps_from_last_positive_r += 1
-            r = -1 - steps_from_last_positive_r * 0.05
-
+            #r = -1 - steps_from_last_positive_r * 0.05
+        r = state.last_painted
         # update Q
         #print("r = " + str(r) + ", q = " + str(qmap[key]), end=" ")
 
         total_reward += r
+        rewarded_steps += 1
 
-        # Q-learning: off-policy temporal difference control
+        # update q(s, a)
         global epsilon
         # v1 = max_a(Q(s', a)), so set epsilon to 0 temporarily
         e, epsilon = epsilon, 0
@@ -572,17 +590,17 @@ def learning_run1(state, random_start=False):
         qmap[key] = v + alpha * (r + gamma * v1 - v)
         epsilon = e
 
-        # SARSA: on-policy temporal difference control
-        # v1 = Q(s', a)
-        # (v1, _) = q_value(state, bot, a, s_key=sk)
-        # qmap[key] += alpha * (r + gamma * v1 - v)
+            # SARSA: on-policy temporal difference control
+            # v1 = Q(s', a)
+            # (v1, _) = q_value(state, bot, a, s_key=sk)
+            # qmap[key] += alpha * (r + gamma * v1 - v)
 
         qmap["count of observations"] += 1
 
             #print("q1 = " + str(qmap[key]))
 
     if random_start: return False
-    else: return action_list, state, total_reward
+    else: return action_list, state, total_reward / rewarded_steps
 
 
 task_init_state = None
@@ -609,7 +627,7 @@ def learn(task_id, qmap_fname):
     best_sol = None
     while not best_sol:
         (best_sol, s, r) = learning_run1(get_state(task_id), random_start=False)
-    iterations = 1000 #40000 // s.width
+    iterations = 100 #10000 // s.width
 
     best_len = len(best_sol)
     print(str(task_id) + " 0: " + str(best_len))
@@ -622,13 +640,14 @@ def learn(task_id, qmap_fname):
             print("learning_run1 failed")
             continue
         results.append(len(sol))
-        #if iterations < 10 or i % (iterations // 5) == 0:
-        print(str(task_id) + " " + str(i) + ": " + str(results[-1]) + " / " + str(best_len),
-                  "Total reward:", round(r, 2))
+        if iterations < 10 or i % (iterations // 10) == 0:
+            print(str(task_id) + " " + str(i) + ": " + str(results[-1]) + " / " + str(best_len),
+                  "Average reward:", round(r, 4))
 
         if not random_start and best_len >= len(sol):
             if best_len > len(sol):
-               print(str(task_id) + " " + str(i) + ": " + str(results[-1]))
+                print(str(task_id) + " " + str(i) + ": " + str(best_len) + " / " + str(results[-1]),
+                      "Average reward:", round(r, 4))
             best_sol = sol
             best_len = results[-1]
 
