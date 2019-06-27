@@ -129,11 +129,10 @@ def collect_boosters2(state, bot_num):
         for (pos, nextPos) in zip(path, path[1:]):
             m = moveCommand(pos, nextPos)
             state.nextAction(m)
-        a = AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot))
-        if a.validate(state, bot):
-            state.nextAction(a)
-        else:
-            print('Cant attach manipulator :(')
+
+        if attach_manipulators(state, bot):
+            #print('Attached!')
+            pass
 
 
 
@@ -540,32 +539,28 @@ def closestRotInBlob2(st, blob=None):
     return path[len(path) - 1]
 
 
-def solve_with_regions(st, qmap_fname):
-    qmap = {}
-    if os.path.isfile(qmap_fname):
-        with open(qmap_fname, 'rb') as f:
-            print("Loading qmap...")
-            qmap = pickle.load(f)
-        print("Loaded qmap with",
-              qmap["count of observations"],
-              "observations and",
-              len(qmap),
-              "states observed at least once")
-    if "count of observations" not in qmap:
-        qmap["count of observations"] = 0
+def solve_with_regions(st, qmap=None, regions_cache=None):
     bot = st.bots[0]
     collect_boosters2(st, 0)
     curPos = st.botPos()
 
-    ids_yx = split_into_regions(st)
-    id_to_blob = ids_yx_to_blobs_map(ids_yx)
-    initial_id = ids_yx[curPos[1]][curPos[0]]
-    assert initial_id != 0
-    plan = make_traversal_plan(ids_yx, initial_id)
-    print(list(plan))
-    processed = set()
+    if not regions_cache:
+        ids_yx = split_into_regions(st)
+        id_to_blob = ids_yx_to_blobs_map(ids_yx)
+        initial_id = ids_yx[curPos[1]][curPos[0]]
+        assert initial_id != 0
+        plan = make_traversal_plan(ids_yx, initial_id)
+        #print(list(plan))
+
+        regions_cache = {}
+        regions_cache["id_to_blob"] = id_to_blob
+        regions_cache["plan"] = plan
+    else:
+        id_to_blob = regions_cache["id_to_blob"]
+        plan = regions_cache["plan"]
 
     blob_points = 0
+    processed = set()
     for blob_id in plan:
         blob = id_to_blob[blob_id]
         assert blob
@@ -573,39 +568,35 @@ def solve_with_regions(st, qmap_fname):
         if blob_id not in processed:
             processed.add(blob_id)
             blob_points += len(blob)
-            from q import learning_run1_in_region
-            st = learning_run1_in_region(
-                qmap, st, blob, at_end_go_to=lambda l, x, y: st.cell(x, y)[1] == Cell.ROT)
+            if qmap:
+                from q import learning_run1_in_region
+                st = learning_run1_in_region(
+                    qmap, st, blob, at_end_go_to=lambda l, x, y: st.cell(x, y)[1] == Cell.ROT)
+            else:
+                # TODO: use mcts inside regions to allow rotations
+                while True:
+                    nextPos = closestRotInBlob2(st, blob)
+                    if nextPos is None:
+                        break
 
-            # # TODO: use mcts inside regions to allow rotations
-            # while True:
-            #     nextPos = closestRotInBlob2(st, blob)
-            #     if nextPos is None:
-            #         break
+    # print("blob points", blob_points)
+    # total_points = 0
+    # clean_points = 0
+    # for y in range(st.height):
+    #     for x in range(st.width):
+    #         kind = st.cell(x, y)[1]
+    #         if kind is Cell.CLEAN:
+    #             clean_points += 1
+    #         if kind is not Cell.OBSTACLE:
+    #             total_points += 1
+    # print("total_points", total_points)
+    # print("clean_points", clean_points)
 
-    print("blob points", blob_points)
-    total_points = 0
-    clean_points = 0
-    for y in range(st.height):
-        for x in range(st.width):
-            kind = st.cell(x, y)[1]
-            if kind is Cell.CLEAN:
-                clean_points += 1
-            if kind is not Cell.OBSTACLE:
-                total_points += 1
-    print("total_points", total_points)
-    print("clean_points", clean_points)
-
-    with open(qmap_fname, "wb") as f:
-        print("Dumping", qmap_fname, "with ",
-              str(round(qmap["count of observations"] * 1e-6, 1)) + "M",
-              "observations")
-        pickle.dump(qmap, f)
-    return st
+    return st, regions_cache
 
 
-problem = "/home/theihor/repo/fluffy-engine/desc/prob-002.desc"
-draw_regions_for_task(problem, "/home/theihor/repo/fluffy-engine/1.svg")
-solve(problem, "/home/theihor/repo/fluffy-engine/q-sol/002.sol",
-      lambda s: solve_with_regions(s, '../qmaps/regions.pickle'),
-      add_score=False)
+# problem = "/home/theihor/repo/fluffy-engine/desc/prob-002.desc"
+# draw_regions_for_task(problem, "/home/theihor/repo/fluffy-engine/1.svg")
+# solve(problem, "/home/theihor/repo/fluffy-engine/q-sol/002.sol",
+#       lambda s: solve_with_regions(s, '../qmaps/regions.pickle'),
+#       add_score=False)

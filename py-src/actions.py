@@ -1,7 +1,7 @@
 from bot import Bot
 from constants import DRILL_DURATION, WHEELS_DURATION, STRICT_VALIDATION
 from state import State, Cell, Booster
-
+from attachdecider import *
 
 class SimpleAction:
     def __init__(self, value: str):
@@ -249,8 +249,10 @@ class AttachManipulator(BoosterAction):
         (bx, by) = bot.pos
         (x, y) = (bx + self.x, by + self.y)
         if x < 0 or x >= state.width or y < 0 or y >= state.height:
+            #print('Trying too attach too far')
             return False
         elif not state.visibleFrom(bx, by, (x, y)):
+            #print('Attach pos is invisible: ', (bx, by), (x, y))
             return False
         return bot.is_attachable(self.x, self.y)
 
@@ -258,6 +260,7 @@ class AttachManipulator(BoosterAction):
         super().process(state, bot)
         bot.attach(self.x, self.y)
         state.boosters[Booster.MANIPULATOR] -= 1
+        bot.repaint(state)
 
     def __str__(self):
         return "B({},{})".format(self.x, self.y)
@@ -315,3 +318,21 @@ class CloneAction(BoosterAction):
         print("CLONE!!!")
         state.bots.append(Bot(bot.pos))
         state.boosters[Booster.CLONE] -= 1
+
+
+def attach_manipulators(state, bot):
+    attached = False
+
+    for i in range(state.boosters[Booster.MANIPULATOR]):
+        attachers = [
+            AttachManipulator(ExperimentalAttacher(forward).get_position(bot)),
+            AttachManipulator(ExperimentalAttacher(forward_wide).get_position(bot)),
+            AttachManipulator(SimpleAttacher().get_position(bot)),
+            #   AttachManipulator(ExperimentalAttacher(experimental).get_position(bot)),
+        ]
+        for a in attachers:
+            if a.validate(state, bot):
+                state.nextAction(a)
+                attached = True
+                attach_manipulators(state, bot)
+    return attached

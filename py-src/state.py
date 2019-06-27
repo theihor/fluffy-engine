@@ -299,6 +299,7 @@ class State(object):
     def removeBooster(self, pos: tuple):
         if self.cell(*pos)[1] == Cell.ROT:
             self.clean_left -= 1
+            self.last_painted.add(pos)
         if self.cell(*pos)[0] != Booster.MYSTERIOUS:
             self.cells[pos[1]][pos[0]] = (None, Cell.CLEAN)
             self.lockBoosters = 2
