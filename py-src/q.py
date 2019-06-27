@@ -79,7 +79,7 @@ def all_actions(bot):
 
 
 epsilon = 0.001
-alpha = 0.3 # learning rate
+alpha = 0.01 # learning rate
 gamma = 0.99  # discount factor
 
 def init_q_value():
@@ -145,6 +145,8 @@ local_visibility_map = {
             (+2, -1): [(+1, -1), (+1, 0)],
             (-2, +1): [(-1, +1), (-1, 0)],
             (+2, +1): [(+1, +1), (+1, 0)],
+
+            (0, 0): [],
 }
 
 # as if bot looks up
@@ -607,7 +609,39 @@ def learning_run1(state, random_start=False):
     else: return action_list, state, total_reward / rewarded_steps
 
 
-def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None):
+def in_vision_range(state, point, destination):
+    # check if destination is locally visible from point
+    (x1, y1) = point
+    (x2, y2) = destination
+    (dx, dy) = (x2 - x1, y2 - y1)
+    if abs(dx) > 3 or abs(dy) > 3:
+        return False
+    else:
+        return is_locally_visible(state, point, (dx, dy))
+
+
+def rot_in_manipulator_range(state, bot, x, y, blob=None):
+    #return state.cell(x, y)[1] == Cell.ROT and (blob is None or (x,y) in blob)
+
+
+    for dx in range(-1, 2):
+        for dy in range(-1, 3):
+            dest = (x + dx, y + dy)
+            # print(x, y, dest)
+            # print("in map", state.in_map(dest))
+            # if state.in_map(dest):
+            #     print("is rot", state.cell(*dest)[1] == Cell.ROT)
+            #     print("in blob", (blob is None or dest in blob))
+            #     print("visible", in_vision_range(state, (x, y), dest))
+            if (state.in_map(dest)
+                    and state.cell(*dest)[1] == Cell.ROT
+                    and (blob is None or dest in blob)
+                    and in_vision_range(state, (x, y), dest)):
+                return True
+    return False
+
+
+def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None, max_steps=None):
     global qmap
     qmap = qmap_par
     bot = state.bots[0]
@@ -656,7 +690,7 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None):
         else: return False
 
     sk = state_key(state)
-    while len(to_clean) > 0:
+    while len(to_clean) > 0 and steps < max_steps:
         #print(steps, ": ")
         #print_sk(sk)
 
@@ -720,27 +754,29 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None):
             # then go to closest rot or
             #print(steps_from_last_positive_r)
             #print('going to rot')
-            if go_to(lambda l, x, y: (state.cell(x, y)[1] == Cell.ROT)):
+
+            #if go_to(lambda l, x, y: (state.cell(x, y)[1] == Cell.ROT)):
+            if go_to(lambda l, x, y: rot_in_manipulator_range(state, bot, x, y, blob)):
                 steps_from_last_positive_r = 0
                 sk = state_key(state)
                 #print(get_key(state, bot, GoToClosestRot()))
                 #print_sk(sk)
                 continue
             elif len(to_clean) == 0: break
-            # elif bot.wheel_duration > 0:
-            #     moved = False
-            #     for m in all_actions(bot)[:4]:
-            #         if m.validate(state, bot):
-            #             moved = True
-            #             action_list.append(m)
-            #             state.nextAction(m)
-            #
-            #     #print(bot.wheel_duration)
-            #     #print_sk(sk)
-            #     #encoder.Encoder.encode_action_lists("../q-sol/fail.sol", [action_list], len(action_list))
-            #     if not moved: raise RuntimeError()
-            #     sk = state_key(state)
-            #     continue
+            elif bot.wheel_duration > 0:
+                moved = False
+                for m in all_actions(bot)[:4]:
+                    if m.validate(state, bot):
+                        moved = True
+                        action_list.append(m)
+                        state.nextAction(m)
+
+                #print(bot.wheel_duration)
+                #print_sk(sk)
+                #encoder.Encoder.encode_action_lists("../q-sol/fail.sol", [action_list], len(action_list))
+                if not moved: raise RuntimeError()
+                sk = state_key(state)
+                continue
             else:
                 # TODO: FIX state.last_painted!!
                 for p in blob:
@@ -769,7 +805,7 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None):
             steps_from_last_positive_r = 0
         else:
             steps_from_last_positive_r += 1
-            r = -1 # - steps_from_last_positive_r * 0.05
+            r = -1 - steps_from_last_positive_r * 0.05
         #r = state.last_painted
         # update Q
         #print("r = " + str(r) + ", q = " + str(qmap[key]), end=" ")
@@ -792,7 +828,7 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None):
     if at_end_go_to:
         go_to(at_end_go_to, in_blob=False)
 
-    return state
+    return state, max_steps is None or steps < max_steps
 
 
 
@@ -864,17 +900,30 @@ def learn_regions(task_id):
     global qmap
     from solver import solve_with_regions
     best_sol = None
-    while not best_sol:
-        (s, regions_cache) = solve_with_regions(get_state(task_id), qmap=qmap)
-        best_sol = list(s.actions())[0]
+    regions_cache = None
+    success = False
+    while not success:
+        (s, regions_cache, success) = solve_with_regions(get_state(task_id), qmap, regions_cache)
+        if success:
+            best_sol = list(s.actions())[0]
     iterations = 100 #10000 // s.width
+
+    # global epsilon, alpha
+    epsilon = 0.999
+    alpha = 0.5
 
     best_len = len(best_sol)
     print(str(task_id) + " 0: " + str(best_len))
     results = [best_len]
 
     for i in range(1, iterations - 1):
-        (s, _) = solve_with_regions(get_state(task_id), qmap, regions_cache)
+        epsilon = 1.0 / (2 * i)
+        alpha = 0.99 / i
+
+        (s, regions_cache, success) = solve_with_regions(get_state(task_id), qmap, regions_cache)
+        if not success:
+            print(str(i) + ": failed with max_steps")
+            continue
         sol = list(s.actions())[0]
 
         if sol is None:

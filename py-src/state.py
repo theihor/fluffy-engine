@@ -91,6 +91,9 @@ class State(object):
         self.pods = set()
         self.clean_left_f()
 
+    def in_map(self, point):
+        return 0 <= point[0] < self.width and 0 <= point[1] < self.height
+
     def clean_left_f(self):
         self.clean_left = 0
         for y in self.cells:

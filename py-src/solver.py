@@ -550,7 +550,8 @@ def solve_with_regions(st, qmap=None, regions_cache=None):
         initial_id = ids_yx[curPos[1]][curPos[0]]
         assert initial_id != 0
         plan = make_traversal_plan(ids_yx, initial_id)
-        #print(list(plan))
+        print(list(plan))
+        #draw_regions_for_task("/home/ihors/repo/fluffy-engine/desc/prob-051.desc", "/home/ihors/repo/fluffy-engine/1.svg")
 
         regions_cache = {}
         regions_cache["id_to_blob"] = id_to_blob
@@ -570,8 +571,11 @@ def solve_with_regions(st, qmap=None, regions_cache=None):
             blob_points += len(blob)
             if qmap:
                 from q import learning_run1_in_region
-                st = learning_run1_in_region(
-                    qmap, st, blob, at_end_go_to=lambda l, x, y: st.cell(x, y)[1] == Cell.ROT)
+                (st, success) = learning_run1_in_region(
+                    qmap, st, blob,
+                    at_end_go_to=lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
+                    max_steps=st.width * st.height * 2)
+                if not success: return st, regions_cache, False
             else:
                 # TODO: use mcts inside regions to allow rotations
                 while True:
@@ -592,7 +596,7 @@ def solve_with_regions(st, qmap=None, regions_cache=None):
     # print("total_points", total_points)
     # print("clean_points", clean_points)
 
-    return st, regions_cache
+    return st, regions_cache, True
 
 
 # problem = "/home/theihor/repo/fluffy-engine/desc/prob-002.desc"
