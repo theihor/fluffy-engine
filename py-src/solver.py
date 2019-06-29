@@ -574,7 +574,8 @@ def solve_with_regions(st, qmap=None, regions_cache=None):
                 (st, success) = learning_run1_in_region(
                     qmap, st, blob,
                     at_end_go_to=lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
-                    max_steps=st.width * st.height * 2)
+                    max_steps=st.width * st.height
+                )
                 if not success: return st, regions_cache, False
             else:
                 # TODO: use mcts inside regions to allow rotations
