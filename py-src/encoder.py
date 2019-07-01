@@ -15,7 +15,7 @@ class Encoder:
         file.close()
 
     @staticmethod
-    def encode_action_lists(filename, lists, ticknum):
+    def encode_action_lists(filename, lists, ticknum=0):
         file = open(filename + "." + str(ticknum), "w")
         for actions in lists:
             for action in actions:

@@ -1,16 +1,10 @@
 while :
 do
-    ./venv/bin/python q.py 51 52 ../qmaps/51.pickle &
-    ./venv/bin/python q.py 101 102 ../qmaps/101.pickle & 
-    ./venv/bin/python q.py 150 151 ../qmaps/150.pickle 
+    ./venv/bin/python q.py 2 6  ../qmaps/nn/q
     
     wait
-    
-    cp ../qmaps/51.pickle ../qmaps/51.backup
-    cp ../qmaps/101.pickle ../qmaps/101.backup
-    cp ../qmaps/150.pickle ../qmaps/150.backup
 
-    sleep 300
+    sleep 10
     killall -9 ./venv/bin/python
 
     echo "All tasks complete!"
@@ -25,5 +19,5 @@ done
 #cp ../qmaps/2.pickle ../qmaps/2.backup
 
 
-echo "All tasks complete!"
+#echo "All tasks complete!"
 

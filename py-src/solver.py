@@ -567,6 +567,7 @@ def solve_with_regions(st, qmap=None, regions_cache=None):
         assert blob
         #curPos = move_to_blob(st, blob)
         if blob_id not in processed:
+            print('blob_id =', blob_id, end=', ')
             processed.add(blob_id)
             blob_points += len(blob)
             if qmap:
@@ -574,7 +575,7 @@ def solve_with_regions(st, qmap=None, regions_cache=None):
                 (st, success) = learning_run1_in_region(
                     qmap, st, blob,
                     at_end_go_to=lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
-                    max_steps=st.width * st.height
+                    max_steps=2000 #st.width * st.height
                 )
                 if not success: return st, regions_cache, False
             else:
