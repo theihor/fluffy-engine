@@ -83,7 +83,7 @@ def all_actions(bot):
 
 epsilon = 0.01
 alpha = 0.01 # learning rate
-gamma = 0.9  # discount factor
+gamma = 1.0  # discount factor
 
 def init_q_value():
     return random.random() * 1e-1
@@ -784,19 +784,23 @@ def in_vision_range(state, point, destination):
 def rot_in_manipulator_range(state, bot, x, y, blob=None):
     #return state.cell(x, y)[1] == Cell.ROT and (blob is None or (x,y) in blob)
 
-    for (dx, dy) in bot.manipulators + [(0, 0)]:
-        dest = (x + dx, y + dy)
+    # for (dx, dy) in bot.manipulators + [(0, 0)]:
+    #     dest = (x + dx, y + dy)
+
+    for dx in range(-3, 4):
+        for dy in range(-3, 4):
         # print(x, y, dest)
         # print("in map", state.in_map(dest))
         # if state.in_map(dest):
         #     print("is rot", state.cell(*dest)[1] == Cell.ROT)
         #     print("in blob", (blob is None or dest in blob))
         #     print("visible", in_vision_range(state, (x, y), dest))
-        if (state.in_map(dest)
-                and state.cell(*dest)[1] == Cell.ROT
-                and (blob is None or dest in blob)
-                and in_vision_range(state, (x, y), dest)):
-            return True
+            dest = (x + dx, y + dy)
+            if (state.in_map(dest)
+                    and state.cell(*dest)[1] == Cell.ROT
+                    and (blob is None or dest in blob)
+                    and in_vision_range(state, (x, y), dest)):
+                return True
     return False
 
 
@@ -882,6 +886,10 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None, max_steps=
     global qmap
     qmap = qmap_par
 
+    global prev_state_set
+    if 'visited set' in qmap:
+        prev_state_set = qmap['visited set']
+
     action_list = []
     total_reward = 0
 
@@ -899,8 +907,6 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None, max_steps=
     train_data = {} # ak -> sk -> (state_action_x, Q)
     for ak in map(str, all_actions(bot)):
         train_data[ak] = {}
-
-    global prev_state_set
 
     state_set = set()
 
@@ -944,7 +950,8 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None, max_steps=
                     nonlocal agent_steps, r
                     agent_steps += 1
 
-                    r = len(state.last_painted) - 1
+                    #r = len(state.last_painted) - 1
+                    r = (len(state.last_painted) - 6) / 10.
 
                     nonlocal total_reward, rewarded_steps, full_state_key
                     total_reward += r
@@ -1024,7 +1031,7 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None, max_steps=
                 raise RuntimeError("can't go to booster")
 
         # if qbot does not see any rot cells or is being stupid
-        if 'r' not in sk or steps_from_last_positive_r > 4:
+        if 'r' not in sk or steps_from_last_positive_r > 10:
             # then go to closest rot or
             if go_to(lambda l, x, y: rot_in_manipulator_range(state, bot, x, y, blob)):
                 steps_from_last_positive_r = 0
@@ -1054,12 +1061,14 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None, max_steps=
         agent_steps += 1
         to_clean.difference_update(state.last_painted)
 
-        r = len(state.last_painted) - 1
+        #r = len(state.last_painted) - 1
         if len(state.last_painted) > 0:
             steps_from_last_positive_r = 0
         else:
             steps_from_last_positive_r += 1
-            r -= steps_from_last_positive_r * 0.1
+            #r -= steps_from_last_positive_r * 0.1
+
+        r = (len(state.last_painted) - 6) / 10.
 
         total_reward += r
         rewarded_steps += 1
@@ -1067,7 +1076,8 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None, max_steps=
         (a1, v1, x1) = q_action_nn(state, bot, s_key=sk)
 
         state_set.add(full_state_key)
-        train_data[str(a)][full_state_key[:-1]] = (x, r, total_reward, agent_steps)
+        if full_state_key[:-1] not in train_data[str(a)]:
+            train_data[str(a)][full_state_key[:-1]] = (x, r, total_reward, agent_steps)
         #print(full_state_key)
 
         x = x1
@@ -1138,10 +1148,11 @@ def learning_run1_in_region(qmap_par, state, blob, at_end_go_to=None, max_steps=
         for i in range(10):
             nn.train_on_batch(xs, labels)
 
-    #     res = nn.evaluate(xs, labels, verbose=0)
-    #     print("Trained: ", res)
-    # print()
+        # res = nn.evaluate(xs, labels, verbose=0)
+        # print("Trained: ", res)
+    #print()
 
+    qmap['visited set'] = prev_state_set
 
     if at_end_go_to:
         go_to(at_end_go_to, in_blob=False)
@@ -1219,11 +1230,11 @@ def learn(task_id, qmap_fname):
 def learn_regions(task_id, pathname):
     global qmap
     qmap = load_nn_qmap(get_state(task_id), pathname)
-    load_visited_set()
+    #load_visited_set()
 
-    global prev_state_set
-    prev_state_set = load_visited_set()
-    print('visited set loaded:', len(prev_state_set))
+    #global prev_state_set
+    #prev_state_set = load_visited_set()
+    #print('visited set loaded:', len(prev_state_set))
 
     from solver import solve_with_regions
     best_sol = None
@@ -1231,7 +1242,7 @@ def learn_regions(task_id, pathname):
     success = False
 
     global epsilon
-    epsilon = 0.1
+    epsilon = 0.9
 
     fails = 0
 
@@ -1242,16 +1253,16 @@ def learn_regions(task_id, pathname):
         else:
             fails += 1
 
-            if epsilon > 0.1:
+            if epsilon > 0.01:
                 epsilon -= 0.01
             else:
-                epsilon = 0.1
-            print("start: failed with max_steps, set epsilon =", epsilon)
-            #dump_nn_qmap(qmap, pathname)
-            encoder.Encoder.encode_action_lists("../q-sol/" + task_id + "last.sol", s.actions())
-            #if fails > 0: return
+                epsilon = 0.01
+            print("start: failed with max_steps, set epsilon =", round(epsilon, 3))
+            dump_nn_qmap(qmap, pathname)
+            encoder.Encoder.encode_action_lists("../q-sol/" + task_id + "last_fail.sol", s.actions())
+            #if fails > 20: return
 
-    iterations = 1000
+    iterations = 100
 
 
     #alpha = 0.5
@@ -1261,18 +1272,19 @@ def learn_regions(task_id, pathname):
     print(str(task_id) + " 0: " + str(best_len))
     results = [best_len]
 
-    epsilon = 0.01
+    epsilon = 0.5
 
     for i in range(1, iterations - 1):
-        #epsilon = 1.0 / (2 * i)
+        epsilon = 1.0 / (i + 1.)
         #alpha = 1.0 / i
 
         (s, regions_cache, success) = solve_with_regions(get_state(task_id), qmap, regions_cache)
         dump_nn_qmap(qmap, pathname)
         #dump_visited_set()
         if not success:
-            print(str(i) + ": failed with max_steps")
-            #print(qmap)
+            print(str(i) + ": failed with max_steps, epsilon = ", round(epsilon, 3))
+            dump_nn_qmap(qmap, pathname)
+            encoder.Encoder.encode_action_lists("../q-sol/" + task_id + "last_fail.sol", s.actions())
             continue
         sol = list(s.actions())[0]
 
@@ -1289,6 +1301,8 @@ def learn_regions(task_id, pathname):
                 print(str(task_id) + " " + str(i) + ": " + str(best_len) + " / " + str(results[-1]))
             best_sol = sol
             best_len = results[-1]
+            dump_nn_qmap(qmap, pathname)
+            encoder.Encoder.encode_action_lists("../q-sol/" + task_id + "last_best.sol", s.actions())
 
     print("Average result on this run:", round(sum(results) / len(results)))
     dump_nn_qmap(qmap, pathname)
@@ -1369,12 +1383,12 @@ def initialize_nn_qmap(state):
     for action in all_actions(state.bots[0]):
 
         model = keras.Sequential([
-            keras.layers.Dense(50, activation=tf.nn.relu, input_shape=[n]),
-            keras.layers.Dense(6, activation=tf.nn.relu),
+            keras.layers.Dense(10, activation=tf.nn.sigmoid, input_shape=[n]),
+            keras.layers.Dense(5, activation=tf.nn.relu),
             keras.layers.Dense(1, activation=tf.keras.activations.linear),
         ])
 
-        optimizer = keras.optimizers.RMSprop(1e-2)
+        optimizer = keras.optimizers.RMSprop(1e-3)
 
         model.compile(loss='mean_squared_error',
                       optimizer=optimizer,
@@ -1388,6 +1402,10 @@ def initialize_nn_qmap(state):
 
 def dump_nn_qmap(map, pathname):
     for key in map:
+        if key == 'visited set':
+            with open(pathname + "_visited_set.pickle", 'wb+') as f:
+                pickle.dump(qmap['visited set'], f)
+            continue
         map[key].save_weights(pathname + "_" + key)
 
 
@@ -1397,6 +1415,11 @@ def load_nn_qmap(state, pathname):
         path = pathname + "_" + key
         if os.path.isfile(path):
             map[key].load_weights(pathname + "_" + key)
+
+    if os.path.isfile(pathname + '_visited_set.pickle'):
+        with open(pathname + '_visited_set.pickle', 'rb') as f:
+            map['visited set'] = pickle.load(f)
+
     return map
 
 
