@@ -279,6 +279,7 @@ def split_into_regions(st):
 
     X = np.array(all_points)
     k = math.ceil(len(all_points) / 300)
+    if k < 2: k = 2
     print(k)
 
     # TODO: post-process clusters to avoid non-connected groups
@@ -575,7 +576,7 @@ def solve_with_regions(st, qmap=None, regions_cache=None):
                 (st, success) = learning_run1_in_region(
                     qmap, st, blob,
                     at_end_go_to=lambda l, x, y: st.cell(x, y)[1] == Cell.ROT,
-                    max_steps=2000 #st.width * st.height
+                    max_steps=1000 #st.width * st.height
                 )
                 if not success: return st, regions_cache, False
             else:
